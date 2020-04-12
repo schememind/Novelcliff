@@ -1,0 +1,50 @@
+{
+	"name": "novelcliff",
+	"configurations": [
+        {
+            "name": "gui",
+            "authors": [
+                "Žans Kļimovičs"
+            ],
+            "copyright": "Copyright © 2020, Žans Kļimovičs",
+            "description": "Graphical user interface for the game (tkd)",
+            "license": "MIT",
+            "targetType": "executable",
+            "mainSourceFile": "source/novelcliff/guitkd/app.d",
+            "excludedSourceFiles": [
+                "source/novelcliff/dbg/*"
+			],
+			"targetName": "novelcliff",
+			"targetPath": "./target/",
+			"dependencies": {
+                "tkd": "~>1.1.13"
+            },
+            "postGenerateCommands-windows-x86": [
+                "copy $TCLTK_PACKAGE_DIR\\dist\\x86\\tcl86t.dll target\\tcl86t.dll /y",
+                "copy $TCLTK_PACKAGE_DIR\\dist\\x86\\tk86t.dll target\\tk86t.dll /y",
+                "xcopy $TCLTK_PACKAGE_DIR\\dist\\library target\\library /i /e /y"
+            ],
+            "postGenerateCommands-windows-x86_64": [
+                "copy $TCLTK_PACKAGE_DIR\\dist\\x86_64\\tcl86t.dll target\\tcl86t.dll /y",
+                "copy $TCLTK_PACKAGE_DIR\\dist\\x86_64\\tk86t.dll target\\tk86t.dll /y",
+                "xcopy $TCLTK_PACKAGE_DIR\\dist\\library target\\library /i /e /y"
+            ]
+        },
+        {
+            "name": "dbg",
+            "authors": [
+                "Žans Kļimovičs"
+            ],
+            "copyright": "Copyright © 2020, Žans Kļimovičs",
+            "description": "Used for step-by-stem game state debugging via command line",
+            "license": "MIT",
+            "targetType": "executable",
+            "mainSourceFile": "source/novelcliff/dbg/app.d",
+            "excludedSourceFiles": [
+                "source/novelcliff/guitkd/*"
+			],
+			"targetName": "novelcliff-dbg",
+			"targetPath": "./target/"
+        }
+    ]
+}
