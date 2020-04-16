@@ -23,6 +23,9 @@ interface IUserInterface
 
     /// Display provided total number of areas in the current game
     void displayAreasTotal(size_t areasTotal);
+
+    /// Show message about finishing current game
+    void showFinishedGameMessage(bool isSuccess, uint coins, uint villains);
 }
 
 /**
@@ -30,11 +33,11 @@ Interface for an object that contains 2D array of Pixel objects
 */
 interface IPixelGridContainer
 {
-	/// Place Pixels of GameObject into appropriate slots of container's Pixel grid
-	void place(GameObject gameObject);
+    /// Place Pixels of GameObject into appropriate slots of container's Pixel grid
+    void place(GameObject gameObject);
 
-	/// Return 2D array of Pixel objects.
-	@property Pixel[][] pixelGrid();
+    /// Return 2D array of Pixel objects.
+    @property Pixel[][] pixelGrid();
 }
 
 /**
@@ -45,14 +48,27 @@ interface IObjectContainer
     /// Create and add static game object to the appropriate list
     GameObject createStaticObject(size_t x, size_t y, Direction direction);
 
-    /// Create and place a coin at a given position
-    Coin createCoin(size_t x, size_t y);
+    /// Create and place all coins in the Area at random positions
+    void createCoins();
+
+    /// Create and place a house at a given position
+    House createHouse(size_t x, size_t y);
 
     /// Make game object updatable and return true if it was not previously updatable
     bool turnIntoUpdatable(GameObject gameObject);
 
     /// Make game object static and return true if it was not previously static
     bool turnIntoStatic(GameObject gameObject);
+
+    /**
+    Adds given GameObject to the list of static transferable objects. That means
+    when the game switches to another Area, provided object would be transferred
+    to that new Area as static object.
+    */
+    void makeTransferableStatic(GameObject gameObject);
+
+    /// Remove given GameObject from the list of static transferable objects.
+    void removeFromTransferableStatic(GameObject gameObject);
 
     /// Actions to take when two GameObjects collide
     void handleCollision(GameObject gameObject1, GameObject gameObject2);
@@ -71,6 +87,9 @@ interface IAreaListContainer
 
     /// Create new Area, append it to the list of Areas and make it active
     void createNextActiveArea();
+
+    /// Finish current game
+    void finish(bool isSuccess);
 
     /// Return reference to the currently active Area
     @property IObjectContainer activeArea();

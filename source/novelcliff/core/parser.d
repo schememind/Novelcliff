@@ -119,6 +119,7 @@ void parse(IAreaListContainer game, string fileName, size_t maxWidth, size_t max
         cursorY++;
         if (cursorY >= maxHeight)
         {
+            game.activeArea.createCoins;
             game.createNextActiveArea;
             cursorY = 5;
         }
@@ -199,4 +200,6 @@ void parse(IAreaListContainer game, string fileName, size_t maxWidth, size_t max
         );
     }
 
+    // House in the last Area
+    game.activeArea.createHouse(1, cursorY - 5);
 }

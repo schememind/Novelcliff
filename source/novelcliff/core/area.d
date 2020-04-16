@@ -27,7 +27,12 @@ private:
     // List of static objects (e.g. words)
     // These objects are not updated in each iteration of the game loop, thus
     // not using processor power.
-	GameObject[] _staticObjects;
+    GameObject[] _staticObjects;
+
+    // List of static objects, that are transferred to other Areas together with
+    // the player. This is used primarily for carried words, that a player can
+    // carry to another Area and throw it there.
+    GameObject[] _transferableStaticObjects;
 
     /// List of updatable animated coins
     Coin[] _coins;
@@ -64,11 +69,19 @@ public:
     /**
     Create and place a coin at a given position
     */
-    override Coin createCoin(size_t x, size_t y)
+    override void createCoins()
     {
-        Coin coin = new Coin(this, x, y);
-        _coins ~= coin;
-        return coin;
+        // TODO
+    }
+
+    /**
+    Create and place a house at a given position
+    */
+    override House createHouse(size_t x, size_t y)
+    {
+        House house = new House(this, x, y);
+        _staticObjects ~= house;
+        return house;
     }
 
     /**
@@ -140,16 +153,62 @@ public:
     }
 
     /**
+    Adds given object to the list of static transferable objects. That means
+    when the game switches to another Area, provided object would be transferred
+    to that new Area as static object.
+    This is used primarily for carried words, that a player can carry to another
+    Area and throw it there.
+    */
+    override void makeTransferableStatic(GameObject gameObject)
+    {
+        _transferableStaticObjects ~= gameObject;
+    }
+
+    /**
+    Remove given GameObject from the list of static transferable objects.
+    */
+    override void removeFromTransferableStatic(GameObject gameObject)
+    {
+        // TODO there must be more efficient ways of doing this
+        bool found = false;
+        size_t id = 0;
+
+        // Search for provided object in the list from which it would be removed
+        foreach (size_t currentId, ref GameObject transferableObject; _transferableStaticObjects)
+        {
+            if (transferableObject == gameObject)
+            {
+                found = true;
+                id = currentId;
+                break;
+            }
+        }
+
+        // If found, remove GameObject from the list of static transferable objects
+        if (found)
+        {
+            _transferableStaticObjects =
+                _transferableStaticObjects[0..id] ~ _transferableStaticObjects[id + 1..$];
+        }
+    }
+
+    /**
     Actions to take when two GameObjects collide
     */
     void handleCollision(GameObject gameObject1, GameObject gameObject2)
     {
         if (gameObject1 == _player)
         {
-            if (auto coin = cast(Coin) gameObject2)
+            if (Coin coin = cast(Coin) gameObject2)
             {
                 coin.remove;
-                game.coinsCollected = game.coinsCollected + 1;
+                // TODO remove coin from Area's list of coins for better performance
+                _game.coinsCollected = _game.coinsCollected + 1;
+            }
+            else if (House house = cast(House) gameObject2)
+            {
+                _player.remove;
+                _game.finish(true);
             }
         }
     }
@@ -165,17 +224,17 @@ public:
 
         // Check player's impact on the game
         if (player.getY + player.getHeight(player.direction) >= _bottomY)
-		{
+        {
             if (!_isLast)
             {
                 _game.switchToNextArea;
             }
-		}
+        }
 
         foreach (ref GameObject updatableObject; _updatableObjects)
-		{
-			updatableObject.update;
-		}
+        {
+            updatableObject.update;
+        }
         foreach (ref Coin coin; _coins)
         {
             coin.update;
@@ -190,13 +249,13 @@ public:
     {
         _game.renderer.place(_player);
         foreach (ref GameObject updatableObject; _updatableObjects)
-		{
+        {
             _game.renderer.place(updatableObject);
-		}
-		foreach (ref GameObject staticObject; _staticObjects)
-		{
+        }
+        foreach (ref GameObject staticObject; _staticObjects)
+        {
             _game.renderer.place(staticObject);
-		}
+        }
         foreach (ref Coin coin; _coins)
         {
             _game.renderer.place(coin);
@@ -231,5 +290,25 @@ public:
     @property void isLast(bool value)
     {
         _isLast = value;
+    }
+
+    /// Return list of transferable static GameObjects
+    @property GameObject[] transferableStaticObjects()
+    {
+        return _transferableStaticObjects;
+    }
+
+    /**
+    Set list of transferable static GameObjects and add its GameObjects to the
+    list of static objects.
+    */
+    @property void transferableStaticObjects(GameObject[] value)
+    {
+        _transferableStaticObjects = value;
+        foreach (ref GameObject gamoObject; value)
+        {
+            gamoObject.area = this;
+            _staticObjects ~= value;
+        }
     }
 }

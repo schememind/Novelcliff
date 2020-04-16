@@ -113,24 +113,24 @@ public:
     /**
     Place Pixels of GameObject into appropriate slots of the Pixel grid
     */
-	override void place(GameObject gameObject)
-	{
-		foreach (ref Pixel pixel; gameObject.pixels)
-		{
+    override void place(GameObject gameObject)
+    {
+        foreach (ref Pixel pixel; gameObject.pixels)
+        {
             if (pixel.isVisible
                 && pixel.absoluteX < width
                 && pixel.absoluteY < height)
             {
                 _pixelGrid[pixel.absoluteX][pixel.absoluteY] = pixel;
             }
-		}
-	}
+        }
+    }
 
     /**
     Return the Pixel grid
     */
-	override @property Pixel[][] pixelGrid()
-	{
-		return _pixelGrid;
-	}
+    override @property Pixel[][] pixelGrid()
+    {
+        return _pixelGrid;
+    }
 }
