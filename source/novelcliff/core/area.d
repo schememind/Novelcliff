@@ -233,6 +233,11 @@ public:
 
         foreach (ref GameObject updatableObject; _updatableObjects)
         {
+            if (updatableObject.getY
+                + updatableObject.getHeight(updatableObject.direction) >= _bottomY)
+            {
+                updatableObject.remove;
+            }
             updatableObject.update;
         }
         foreach (ref Coin coin; _coins)

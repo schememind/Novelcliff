@@ -32,11 +32,29 @@ private:
         
         // Try to move picked object above the picking object and see if there
         // are any obstacles.
-        Pixel collidedPixel = carriedObject.setPosition(
-            carriedObject.x,
-            y - carriedObject.height[direction],
-            true
-        );
+        Pixel collidedPixel;
+        for (size_t pickY = carriedObject.y - 1;
+                pickY >= y - carriedObject.height[direction];
+                pickY--)
+        {
+            collidedPixel = carriedObject.setPosition(
+                carriedObject.x,
+                pickY,
+                true,
+                this
+            );
+            if (collidedPixel !is null)
+            {
+                if (collidedPixel.parent == this)
+                {
+                    collidedPixel = null;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
 
         if (collidedPixel is null)
         {
@@ -162,7 +180,7 @@ private:
         }
 
         // Prepare carried object to be thrown in the next game loop iteration
-        _carriedObject.startThrowingItself(3);
+        _carriedObject.startThrowingItself(2);
 
         _area.removeFromTransferableStatic(_carriedObject);
         
@@ -327,7 +345,8 @@ public:
         height[Direction.RIGHT]++;
     }
 
-    Pixel setPosition(size_t newX, size_t newY, bool isCheckCollision)
+    Pixel setPosition(size_t newX, size_t newY, bool isCheckCollision,
+                        GameObject ignoredObject = null)
     {
         if (newX == size_t.max
             || newX + width[_direction] >= _area.game.renderer.pixelGrid.length
@@ -348,7 +367,8 @@ public:
             anotherPixel = pixel.setPosition(
                 newX + pixel.relativeX,
                 newY + pixel.relativeY,
-                isCheckCollision
+                isCheckCollision,
+                ignoredObject
             );
             if (isCheckCollision && anotherPixel !is null)
             {
@@ -621,8 +641,11 @@ public:
     another object that already occupies new position (if any).
     New position is not set if Pixel of another object exists at new poistion
     and it is collision responsive.
+    One GameObject can be passed as ignoredObject (null by default) in order to
+    ignore collision with that GameObject.
     */
-    Pixel setPosition(size_t newX, size_t newY, bool isCheckCollision)
+    Pixel setPosition(size_t newX, size_t newY, bool isCheckCollision,
+                        GameObject ignoredObject = null)
     {
         Pixel anotherPixel = parent._area.game.renderer.pixelGrid[newX][newY];
 
@@ -630,6 +653,7 @@ public:
         {
             if (anotherPixel is null
                     || anotherPixel.parent == parent
+                    || (ignoredObject !is null && anotherPixel.parent == ignoredObject)
                     || !anotherPixel.isCollisionResponsive)
             {
                 // Collision checked but not detected:
@@ -773,6 +797,8 @@ public:
 private class ThrowHandler
 {
 private:
+    static throwingCoef = 3;
+
     uint throwCycle, initialCycles, throwPhase;
     bool isPreviouslyStatic;
     GameObject parent;
@@ -788,7 +814,13 @@ public:
     size_t calculateCoefficient()
     {
         return throwCycle > 0
-                    ? throwPhase == 1 ? 2 : 0
+                    ? throwPhase == 1
+                        ? throwCycle % throwingCoef == 0
+                            ? 2
+                            : 1
+                        : throwCycle % throwingCoef == 0
+                            ? 0
+                            : 1
                     : 0;
     }
 
@@ -832,8 +864,8 @@ public:
     void startThrowingItself(uint height)
     {
         isPreviouslyStatic = parent._area.turnIntoUpdatable(parent);
-        throwCycle = height;
-        initialCycles = height;
+        throwCycle = height * throwingCoef;
+        initialCycles = height * throwingCoef;
         throwPhase = 1;
         parent._gravity = 1;
         parent._walkHandler.isMovingHorizontally = true;
