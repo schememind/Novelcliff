@@ -37,11 +37,257 @@ private:
     /// List of updatable animated coins
     Coin[] _coins;
 
+    /// List of updatable villains
+    Villain[] _villains;
+
     // Y coordinate of the bottom row of the Area
     size_t _bottomY;
 
     // Indicates whether this Area is the first/last one in the list of game Areas.
     bool _isFirst, _isLast;
+
+    /**
+    Find suitable Slots based on given size and condition functions executed on
+    every side of the slot.
+    Condition function parameters: x, y at which condition should be checked,
+    as well as the boolean value indicating whether condition is mandatory for
+    ALL coordinates of the particular side (true) or ANY (at least one) (false).
+    */
+    Slot[] findSuitableSlots(
+        size_t yFrom, size_t yTo, size_t requiredWidth, size_t requiredHeight,
+        bool delegate(size_t, size_t) topCondition,
+        bool isTopConditionMandatoryForAll,
+        bool delegate(size_t, size_t) rightCondition,
+        bool isRightConditionMandatoryForAll,
+        bool delegate(size_t, size_t) bottomCondition,
+        bool isBottomConditionMandatoryForAll,
+        bool delegate(size_t, size_t) leftCondition,
+        bool isLeftConditionMandatoryForAll)
+    {
+        Slot[] result = [];
+
+        // Fill renderer's pixel grid with existing objects, so that we can
+        // analyze free pixels
+        _game.renderer.clear;
+        renderAllObjects;
+
+        for (size_t y = yFrom; y < yTo - 1; y++)
+        {
+            for (size_t x = 1; x < _game.renderer.pixelGrid.length - 1; x++)
+            {
+                if (_game.renderer.pixelGrid[x][y] is null)
+                {
+                    // Empty pixel found: check whether rectangle with the given
+                    // requiredWidth and requiredHeight can fit at this position
+                    // as top-left X and Y.
+                    bool isSuitable = true;
+                    bool isTopConditionMet = false;
+                    bool isBottomConditionMet = false;
+                    bool isLeftConditionMet = false;
+                    bool isRightConditionMet = false;
+
+                    currentSlotAnalysis:
+                    for (size_t innerY = y; innerY < y + requiredHeight; innerY++)
+                    {
+                        if (innerY > yTo)
+                        {
+                            isSuitable = false;
+                            break currentSlotAnalysis;
+                        }
+                        for (size_t innerX = x; innerX < x + requiredWidth; innerX++)
+                        {
+                            if (innerX >= _game.renderer.pixelGrid.length
+                                || _game.renderer.pixelAt(x, y) !is null)
+                            {
+                                isSuitable = false;
+                                break currentSlotAnalysis;
+                            }
+
+                            // Check condition above the UPPER side of the Slot
+                            if (innerY == y
+                                && !isTopConditionMet)
+                            {
+                                if (topCondition(innerX, innerY))
+                                {
+                                    // If at least one position check is required
+                                    // to fulfil the condition, the entire condition
+                                    // counts matched.
+                                    isTopConditionMet = !isTopConditionMandatoryForAll;
+                                }
+                                else
+                                {
+                                    if (isTopConditionMandatoryForAll)
+                                    {
+                                        // The entire condition fails since it
+                                        // was mandatory for all positions
+                                        // along the current side of the Slot.
+                                        isSuitable = false;
+                                        break currentSlotAnalysis;
+                                    }
+                                    else
+                                    {
+                                        if (innerX == x + requiredWidth - 1)
+                                        {
+                                            // Checked all positions along the
+                                            // current horizontal side of the Slot -
+                                            // non of them matches the condition.
+                                            isSuitable = false;
+                                            break currentSlotAnalysis;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Check condition below the BOTTOM side of the Slot
+                            if (innerY == y + requiredHeight - 1
+                                && !isBottomConditionMet)
+                            {
+                                if (bottomCondition(innerX, innerY))
+                                {
+                                    // If at least one position check is required
+                                    // to fulfil the condition, the entire condition
+                                    // counts matched.
+                                    isBottomConditionMet = !isBottomConditionMandatoryForAll;
+                                }
+                                else
+                                {
+                                    if (isBottomConditionMandatoryForAll)
+                                    {
+                                        // The entire condition fails since it
+                                        // was mandatory for all positions
+                                        // along the current side of the Slot.
+                                        isSuitable = false;
+                                        break currentSlotAnalysis;
+                                    }
+                                    else
+                                    {
+                                        if (innerX == x + requiredWidth - 1)
+                                        {
+                                            // Checked all positions along the
+                                            // current horizontal side of the Slot -
+                                            // non of them matches the condition.
+                                            isSuitable = false;
+                                            break currentSlotAnalysis;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Check condition to the LEFT of the Slot
+                            if (innerX == x
+                                && !isLeftConditionMet)
+                            {
+                                if (leftCondition(innerX, innerY))
+                                {
+                                    // If at least one position check is required
+                                    // to fulfil the condition, the entire condition
+                                    // counts matched.
+                                    isLeftConditionMet = !isLeftConditionMandatoryForAll;
+                                }
+                                else
+                                {
+                                    if (isLeftConditionMandatoryForAll)
+                                    {
+                                        // The entire condition fails since it
+                                        // was mandatory for all positions
+                                        // along the current side of the Slot.
+                                        isSuitable = false;
+                                        break currentSlotAnalysis;
+                                    }
+                                    else
+                                    {
+                                        if (innerY == y + requiredHeight - 1)
+                                        {
+                                            // Checked all positions along the
+                                            // current vertical side of the Slot -
+                                            // non of them matches the condition.
+                                            isSuitable = false;
+                                            break currentSlotAnalysis;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Check condition to the RIGHT of the Slot
+                            if (innerX == x + requiredWidth - 1
+                                && !isRightConditionMet)
+                            {
+                                if (rightCondition(innerX, innerY))
+                                {
+                                    // If at least one position check is required
+                                    // to fulfil the condition, the entire condition
+                                    // counts matched.
+                                    isRightConditionMet = !isRightConditionMandatoryForAll;
+                                }
+                                else
+                                {
+                                    if (isRightConditionMandatoryForAll)
+                                    {
+                                        // The entire condition fails since it
+                                        // was mandatory for all positions
+                                        // along the current side of the Slot.
+                                        isSuitable = false;
+                                        break currentSlotAnalysis;
+                                    }
+                                    else
+                                    {
+                                        if (innerY == y + requiredHeight - 1)
+                                        {
+                                            // Checked all positions along the
+                                            // current vertical side of the Slot -
+                                            // non of them matches the condition.
+                                            isSuitable = false;
+                                            break currentSlotAnalysis;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (isSuitable)
+                    {
+                        result ~= new Slot(x, y, requiredWidth, requiredHeight);
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+    Calculate size of the step (in Pixels), that is minimal distance between objects
+    */
+    size_t calculateStepSize(Slot[] slots, size_t yFrom, size_t yTo,
+                         size_t objectWidth, float probability)
+    {
+        if (probability > 1.0)
+        {
+            probability = 1.0;
+        }
+        else if (probability < 0.0)
+        {
+            probability = 0.0;
+        }
+
+        // Step (number of free Pixels to leave between object)
+        size_t step = objectWidth;
+
+        // Calculate number of objects to place in the Area
+        size_t qty = cast(size_t)((yTo - yFrom) * probability);
+        if (qty > slots.length)
+        {
+            qty = slots.length;
+            step = objectWidth;
+        }
+        else
+        {
+            step = slots.length / qty;
+        }
+
+        return step;
+    }
     
 public:
     this(IAreaListContainer game, LivingObject player, size_t bottomY)
@@ -67,11 +313,81 @@ public:
     }
 
     /**
-    Create and place a coin at a given position
+    Analyze empty space and randomly fill it with coins and villains in the
+    specified vertical range
     */
-    override void createCoins()
+    override void createCoinsAndVillains(size_t yFrom, size_t yTo)
     {
-        // TODO
+        import std.random: Random, uniform;
+
+        if (yFrom >= yTo)
+        {
+            return;
+        }
+
+        Slot[] freeSlots;
+        size_t step = 1;
+        auto rnd = Random();
+
+        // Create and place Coins
+        freeSlots = findSuitableSlots(
+            yFrom, yTo, 1, 1,
+            delegate(size_t checkX, size_t checkY)  // Along the TOP side
+            {
+                return true;
+            }, true,  // all
+            delegate(size_t checkX, size_t checkY)  // Along the RIGHT side
+            {
+                return true;
+            }, true, // all
+            delegate(size_t checkX, size_t checkY)  // Along the BOTTOM side
+            {
+                return _game.renderer.pixelAt(checkX, checkY + 1) !is null;
+            }, false, // at least 1
+            delegate(size_t checkX, size_t checkY)  // Along the LEFT side
+            {
+                return _game.renderer.pixelAt(checkX - 1, checkY) is null;
+            }, true // all
+        );
+        step = calculateStepSize(freeSlots, yFrom, yTo, 1, 0.50);  // TODO parametrize probability
+        for (size_t i = uniform(0, step, rnd); i < freeSlots.length; i += step)
+        {
+            _coins ~= new Coin(this, freeSlots[i].x, freeSlots[i].y);
+        }
+
+        // Create and place Swords
+        freeSlots = findSuitableSlots(
+            yFrom, yTo, 8, 1,
+            delegate(size_t checkX, size_t checkY)  // Along the TOP side
+            {
+                return _game.renderer.pixelAt(checkX, checkY - 1) is null;
+            }, true,  // all
+            delegate(size_t checkX, size_t checkY)  // Along the RIGHT side
+            {
+                return _game.renderer.pixelAt(checkX + 1, checkY) is null;
+            }, true, // all
+            delegate(size_t checkX, size_t checkY)  // Along the BOTTOM side
+            {
+                return _game.renderer.pixelAt(checkX, checkY + 1) !is null;
+            }, false, // at least 1
+            delegate(size_t checkX, size_t checkY)  // Along the LEFT side
+            {
+                return _game.renderer.pixelAt(checkX - 1, checkY) is null;
+            }, true // all
+        );
+        step = calculateStepSize(freeSlots, yFrom, yTo, 8, 0.30);  // TODO parametrize probability
+        for (size_t i = uniform(0, step, rnd); i < freeSlots.length; i += step)
+        {
+            _villains ~= new Sword(
+                this,
+                freeSlots[i].x,
+                freeSlots[i].y,
+                Direction.RIGHT,
+                1,
+                freeSlots[i].x - 5,
+                freeSlots[i].x + 8 + 5
+            );
+        }
     }
 
     /**
@@ -244,11 +560,14 @@ public:
         {
             coin.update;
         }
+        foreach (ref Villain villain; _villains)
+        {
+            villain.update;
+        }
     }
 
     /**
     Call render methods of all game objects of the Area.
-    Each game object contains reference to the Renderer.
     */
     void renderAllObjects()
     {
@@ -264,6 +583,10 @@ public:
         foreach (ref Coin coin; _coins)
         {
             _game.renderer.place(coin);
+        }
+        foreach (ref Villain villain; _villains)
+        {
+            _game.renderer.place(villain);
         }
     }
 
@@ -315,5 +638,21 @@ public:
             gamoObject.area = this;
             _staticObjects ~= value;
         }
+    }
+}
+
+/**
+Rectangle to mark an area in the Area.
+*/
+private class Slot
+{
+    size_t x, y, w, h;
+
+    this(size_t x, size_t y, size_t w, size_t h)
+    {
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
     }
 }

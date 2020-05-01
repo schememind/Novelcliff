@@ -79,7 +79,7 @@ public:
     /**
     Fill all slots of the Pixel grid with nulls
     */
-    void clear()
+    override void clear()
     {
         for (size_t x = 0; x < width; x++)
         {
@@ -124,6 +124,18 @@ public:
                 _pixelGrid[pixel.absoluteX][pixel.absoluteY] = pixel;
             }
         }
+    }
+
+    /**
+    Safely get Pixel at the specified position.
+    */
+    override Pixel pixelAt(size_t x, size_t y)
+    {
+        if (x >= _pixelGrid.length || y >= _pixelGrid[0].length)
+        {
+            return null;
+        }
+        return _pixelGrid[x][y];
     }
 
     /**

@@ -33,8 +33,14 @@ Interface for an object that contains 2D array of Pixel objects
 */
 interface IPixelGridContainer
 {
+    /// Fill all slots of the Pixel grid with nulls
+    void clear();
+
     /// Place Pixels of GameObject into appropriate slots of container's Pixel grid
     void place(GameObject gameObject);
+
+    /// Safely get Pixel at the specified position.
+    Pixel pixelAt(size_t x, size_t y);
 
     /// Return 2D array of Pixel objects.
     @property Pixel[][] pixelGrid();
@@ -48,8 +54,8 @@ interface IObjectContainer
     /// Create and add static game object to the appropriate list
     GameObject createStaticObject(size_t x, size_t y, Direction direction);
 
-    /// Create and place all coins in the Area at random positions
-    void createCoins();
+    /// Analyze empty space and randomly fill it with coins and villains in the specified range
+    void createCoinsAndVillains(size_t yFrom, size_t yTo);
 
     /// Create and place a house at a given position
     House createHouse(size_t x, size_t y);

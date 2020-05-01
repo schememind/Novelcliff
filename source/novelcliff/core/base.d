@@ -9,6 +9,32 @@ import novelcliff.core.interfaces;
 import novelcliff.core.enums;
 
 /**
+Common class for any villain.
+*/
+class Villain : GameObject
+{
+private:
+    int _health;
+
+public:
+    this(IObjectContainer area, size_t x, size_t y, Direction direction, int health)
+    {
+        super(area, x, y, direction);
+        _health = health;
+    }
+
+    @property int health()
+    {
+        return _health;
+    }
+
+    @property void health(int value)
+    {
+        _health = value;
+    }
+}
+
+/**
 Dynamic object that possesses "living" properties, e.g. health
 */
 class LivingObject : GameObject
@@ -32,6 +58,7 @@ private:
         
         // Try to move picked object above the picking object and see if there
         // are any obstacles.
+        size_t carriedObjectInitialY = carriedObject.y;
         Pixel collidedPixel;
         for (size_t pickY = carriedObject.y - 1;
                 pickY >= y - carriedObject.height[direction];
@@ -51,6 +78,14 @@ private:
                 }
                 else
                 {
+                    // If it is not possible to pick up GameObject due to
+                    // collision with other GameObject (except the one that picks
+                    // it up), bring carried object back to its initial Y position
+                    carriedObject.setPosition(
+                        carriedObject.x,
+                        carriedObjectInitialY,
+                        false
+                    );
                     break;
                 }
             }
@@ -298,8 +333,8 @@ public:
     }
 
     /**
-    Add Pixel to the GameObject.
-    Pixel will be used when GameObject is facing the specified direction. 
+    Add Pixel to the GameObject. Pixel would later be used for rendering
+    when GameObject is facing the specified direction. 
     */
     void addPixel(dchar symbol, size_t relX, size_t relY, Direction direction)
     {
@@ -942,14 +977,13 @@ Collectable coin
 class Coin : GameObject
 {
 private:
-    dchar[] animationSymbols;
+    static dchar[] animationSymbols = [ '|', '/', '-', '\\' ];
     size_t frameId;
 
 public:
     this(IObjectContainer area, size_t x, size_t y, size_t startFrame=0)
     {
         super(area, x, y, Direction.RIGHT);
-        animationSymbols = [ '|', '/', '-', '\\' ];
         frameId = startFrame;
         addPixel(animationSymbols[0], 0, 0, Direction.RIGHT);
         addPixel(animationSymbols[0], 0, 0, Direction.LEFT);
@@ -1019,5 +1053,53 @@ public:
         addPixel('_', 8, 5, Direction.RIGHT);
         addPixel('|', 9, 5, Direction.RIGHT);
         recalculateProperties;
+    }
+}
+
+class Sword : Villain
+{
+private:
+    size_t _minX, _maxX;
+
+public:
+    this(IObjectContainer area, size_t x, size_t y, Direction direction,
+        int health, size_t minX, size_t maxX)
+    {
+        super(area, x, y, direction, health);
+        addPixel('1', 0, 0, Direction.RIGHT);
+        addPixel('~', 1, 0, Direction.RIGHT);
+        addPixel('{', 2, 0, Direction.RIGHT);
+        addPixel('=', 3, 0, Direction.RIGHT);
+        addPixel('=', 4, 0, Direction.RIGHT);
+        addPixel('=', 5, 0, Direction.RIGHT);
+        addPixel('=', 6, 0, Direction.RIGHT);
+        addPixel('>', 7, 0, Direction.RIGHT);
+        addPixel('<', 0, 0, Direction.LEFT);
+        addPixel('=', 1, 0, Direction.LEFT);
+        addPixel('=', 2, 0, Direction.LEFT);
+        addPixel('=', 3, 0, Direction.LEFT);
+        addPixel('=', 4, 0, Direction.LEFT);
+        addPixel('}', 5, 0, Direction.LEFT);
+        addPixel('~', 6, 0, Direction.LEFT);
+        addPixel('1', 7, 0, Direction.LEFT);
+        recalculateProperties;
+        _minX = minX;
+        _maxX = maxX;
+        isMovingHorizontally = true;
+    }
+
+    override void update()
+    {
+        super.update;
+        startJump(4);
+        if (x <= _minX || _xCollidedPixel !is null || x == 0)
+        {
+            direction = Direction.RIGHT;
+        }
+        else if (x >= _maxX || _xCollidedPixel !is null
+                || x + width[_direction] >= _area.game.renderer.pixelGrid.length - 1)
+        {
+            direction = Direction.LEFT;
+        }
     }
 }

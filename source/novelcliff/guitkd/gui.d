@@ -111,20 +111,25 @@ private:
             .pack(0, 0,
                   GeometrySide.left, GeometryFill.none, AnchorPosition.northWest,
                   false);
-        areaTotalValue = new Label(hud, "1")
+        new Label(hud, "        Area:")
             .setTextAnchor(AnchorPosition.northWest)
             .pack(0, 0,
-                  GeometrySide.right, GeometryFill.none, AnchorPosition.northWest,
-                  false);
-        new Label(hud, " of ")
-            .setTextAnchor(AnchorPosition.northWest)
-            .pack(0, 0,
-                  GeometrySide.right, GeometryFill.none, AnchorPosition.northWest,
+                  GeometrySide.left, GeometryFill.none, AnchorPosition.northWest,
                   false);
         areaCurrentValue = new Label(hud, "1")
             .setTextAnchor(AnchorPosition.northWest)
             .pack(0, 0,
-                  GeometrySide.right, GeometryFill.none, AnchorPosition.northWest,
+                  GeometrySide.left, GeometryFill.none, AnchorPosition.northWest,
+                  false);
+        new Label(hud, "/")
+            .setTextAnchor(AnchorPosition.northWest)
+            .pack(0, 0,
+                  GeometrySide.left, GeometryFill.none, AnchorPosition.northWest,
+                  false);
+        areaTotalValue = new Label(hud, "1")
+            .setTextAnchor(AnchorPosition.northWest)
+            .pack(0, 0,
+                  GeometrySide.left, GeometryFill.none, AnchorPosition.northWest,
                   false);
     }
 
@@ -261,6 +266,11 @@ private:
         {
             game = new Game(fileName, 120, 35, this);
             isRunning = true;
+
+            // This seemingly unnecessary call somehow fixes a bug of coins
+            // getting rendered inside of other objects :)
+            game.renderString;
+
             mainWindow.setIdleCommand(
                 delegate(CommandArgs args)
                 {

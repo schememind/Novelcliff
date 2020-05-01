@@ -119,7 +119,11 @@ void parse(IAreaListContainer game, string fileName, size_t maxWidth, size_t max
         cursorY++;
         if (cursorY >= maxHeight)
         {
-            game.activeArea.createCoins;
+            // Before switching create coins and villains
+            // (all words have been placed at this moment)
+            game.activeArea.createCoinsAndVillains(5, cursorY);
+
+            // Create next area and switch focus to it
             game.createNextActiveArea;
             cursorY = 5;
         }
@@ -202,4 +206,7 @@ void parse(IAreaListContainer game, string fileName, size_t maxWidth, size_t max
 
     // House in the last Area
     game.activeArea.createHouse(1, cursorY - 5);
+
+    // Create coins and villains in the last area
+    game.activeArea.createCoinsAndVillains(5, cursorY - 5);
 }
