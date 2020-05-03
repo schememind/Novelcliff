@@ -383,7 +383,6 @@ public:
                 freeSlots[i].x,
                 freeSlots[i].y,
                 Direction.RIGHT,
-                1,
                 freeSlots[i].x - 5,
                 freeSlots[i].x + 8 + 5
             );
@@ -525,6 +524,36 @@ public:
             {
                 _player.remove;
                 _game.finish(true);
+            }
+        }
+        else if (gameObject1.isThrownWeapon)
+        {
+            if (Villain villain = cast(Villain) gameObject2)
+            {
+                if (!villain.isBlinking)
+                {
+                    gameObject1.remove;
+                    villain.health = villain.health - 1;
+                    if (villain.health <= 0)
+                    {
+                        _game.villainsEliminated = _game.villainsEliminated + 1;
+                    }
+                }
+            }
+        }
+        else if (gameObject2.isThrownWeapon)
+        {
+            if (Villain villain = cast(Villain) gameObject1)
+            {
+                if (!villain.isBlinking)
+                {
+                    gameObject2.remove;
+                    villain.health = villain.health - 1;
+                    if (villain.health <= 0)
+                    {
+                        _game.villainsEliminated = _game.villainsEliminated + 1;
+                    }
+                }
             }
         }
     }

@@ -34,6 +34,9 @@ private:
     // The amount of coins collected by the player during current game
     uint _coinsCollected;
 
+    // The amount of villains eliminated by the player during current game
+    uint _villainsEliminated;
+
     void handleInput()
     {
         if (receivedSignals[InputSignal.RIGHT_PRESS])
@@ -238,6 +241,26 @@ public:
         if (_ui !is null)
         {
             _ui.displayCoins(value);
+        }
+    }
+
+    /**
+    Return the amount of eliminated villain for the current game
+    */
+    override @property uint villainsEliminated()
+    {
+        return _villainsEliminated;
+    }
+
+    /**
+    Set the amount of eliminated villain for the current game
+    */
+    override @property void villainsEliminated(uint value)
+    {
+        _villainsEliminated = value;
+        if (_ui !is null)
+        {
+            _ui.displayVillains(value);
         }
     }
 }

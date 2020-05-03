@@ -108,4 +108,10 @@ interface IAreaListContainer
 
     /// Set the amount of collected coins for the current game
     @property void coinsCollected(uint value);
+
+    /// Return the amount of eliminated villain for the current game
+    @property uint villainsEliminated();
+
+    /// Set the amount of eliminated villain for the current game
+    @property void villainsEliminated(uint value);
 }

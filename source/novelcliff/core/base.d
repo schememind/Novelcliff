@@ -7,6 +7,7 @@ module novelcliff.core.base;
 
 import novelcliff.core.interfaces;
 import novelcliff.core.enums;
+import std.conv: to;
 
 /**
 Common class for any villain.
@@ -15,12 +16,18 @@ class Villain : GameObject
 {
 private:
     int _health;
+    size_t[2] healthPixelIndex;
 
 public:
-    this(IObjectContainer area, size_t x, size_t y, Direction direction, int health)
+    this(IObjectContainer area, size_t x, size_t y, Direction direction,
+         int health, size_t leftHealthPixelIndex, size_t rightHealthPixelIndex)
     {
         super(area, x, y, direction);
-        _health = health;
+
+        // Health is displayed as a single char, thus it can only be 1 character long
+        _health = health > 9 ? 9 : health;
+        healthPixelIndex[Direction.LEFT] = leftHealthPixelIndex;
+        healthPixelIndex[Direction.RIGHT] = rightHealthPixelIndex;
     }
 
     @property int health()
@@ -30,7 +37,35 @@ public:
 
     @property void health(int value)
     {
+        // Normalize input value. Since health is displayed as a single char,
+        // it can only be 1 character long
+        if (value > 9)
+        {
+            value = 9;
+        }
+        else if (value < 0)
+        {
+            value = 0;
+        }
+
+        // If value is decreased, but the Villain is not yet killed
+        if (value < _health && value > 0)
+        {
+            startBlinking(3, '-');
+        }
+
         _health = value;
+
+        // Render updated health value
+        _pixels[Direction.LEFT][healthPixelIndex[Direction.LEFT]]._symbol =
+            to!dchar(to!string(_health));
+        _pixels[Direction.RIGHT][healthPixelIndex[Direction.RIGHT]]._symbol =
+            to!dchar(to!string(_health));
+        
+        if (_health <= 0)
+        {
+            killItself;
+        }
     }
 }
 
@@ -289,7 +324,7 @@ private:
     // It is possible for an object to have different set of pixels
     // (and different dimensions) in different positions:
     // width[0] for width when in LEFT direction,
-    // width[1] for width when in LEFT direction.
+    // width[1] for width when in RIGHT direction.
     size_t[2] width, height;
 
     Direction _direction;
@@ -307,6 +342,7 @@ private:
     JumpHandler _jumpHandler;
     ThrowHandler _throwHandler;
     BlinkHandler _blinkHandler;
+    ScheduleHandler _scheduleHandler;
     bool _isOnGround;
 
     // Pixels of other GameObjects that current GameObject is colliding with
@@ -330,6 +366,7 @@ public:
         _jumpHandler = new JumpHandler(this);
         _throwHandler = new ThrowHandler(this);
         _blinkHandler = new BlinkHandler(this);
+        _scheduleHandler = new ScheduleHandler(this);
     }
 
     /**
@@ -491,15 +528,13 @@ public:
         );
 
         // Detect whether GameObject is on a "ground"
-        _isOnGround = _yCollidedPixel !is null 
-                        // && _yCollidedPixel.y >= y + height[_direction]
+        _isOnGround = _yCollidedPixel !is null
+                        && !cast(Villain)_yCollidedPixel.parent
+                        && !_yCollidedPixel.parent.isThrownWeapon
         ;
 
         // Update jumping cycle
         _jumpHandler.update;
-
-        // Update self-throwing cycle
-        _throwHandler.update;
 
         // Update blinking cycle
         _blinkHandler.update;
@@ -513,6 +548,12 @@ public:
         {
             _area.handleCollision(this, _yCollidedPixel.parent);
         }
+
+        // Update self-throwing cycle
+        _throwHandler.update;
+
+        // Update scheduled ticks and execute any scheduled action (if any)
+        _scheduleHandler.update;
     }
 
     /// Start jumping process
@@ -546,6 +587,33 @@ public:
             pixel._isVisible = false;
             pixel.isCollisionResponsive = false;
         }
+    }
+
+    /// Remove itself with freezing, blinking and removing
+    void killItself(uint blinkCycles=3)
+    {
+        foreach (ref Pixel pixel; _pixels[Direction.LEFT])
+        {
+            pixel.isCollisionResponsive = false;
+        }
+        foreach (ref Pixel pixel; _pixels[Direction.RIGHT])
+        {
+            pixel.isCollisionResponsive = false;
+        }
+        _walkHandler.isMovingHorizontally = false;
+        _jumpHandler.jumpCycle = 0;
+        _throwHandler.throwCycle = 0;
+        _throwHandler.throwPhase = 0;
+        _scheduleHandler.voidAction = null;
+        _gravity = 0;
+        startBlinking(blinkCycles, '-');
+        schedule(blinkCycles * 2, delegate() { remove; });
+    }
+
+    /// Schedule provided void method execution after provided ticks
+    void schedule(uint ticks, void delegate() voidAction)
+    {
+        _scheduleHandler.scheduleActionAfterTicks(ticks, voidAction);
     }
 
     /// Returns status of object's horizontal movement
@@ -609,6 +677,18 @@ public:
     @property void area(IObjectContainer value)
     {
         _area = value;
+    }
+
+    /// Returns true if game object is currently in the state of throwing
+    @property bool isThrownWeapon()
+    {
+        return _throwHandler.isWeapon;
+    }
+
+    /// Returns true if GameObject is currently blinking
+    @property bool isBlinking()
+    {
+        return _blinkHandler.blinkCycle > 0;
     }
 }
 
@@ -836,6 +916,11 @@ private:
 
     uint throwCycle, initialCycles, throwPhase;
     bool isPreviouslyStatic;
+
+    // When throwCycle reaches 0 thrown body still keeps falling down
+    // and should still be considered dangerous
+    bool isWeapon;
+
     GameObject parent;
 
 public:
@@ -904,6 +989,7 @@ public:
         throwPhase = 1;
         parent._gravity = 1;
         parent._walkHandler.isMovingHorizontally = true;
+        isWeapon = true;
     }
 
     void stopThrowingProgress()
@@ -912,6 +998,7 @@ public:
         parent._walkHandler.isMovingHorizontally = false;
         throwCycle = 0;
         throwPhase = 0;
+        isWeapon = false;
         if (parent._initialGravity == 0)
         {
             parent._gravity = 0;
@@ -961,6 +1048,42 @@ public:
             {
                 parent._area.turnIntoStatic(parent);
                 isBlinkRunning = false;
+            }
+        }
+    }
+}
+
+private class ScheduleHandler
+{
+private:
+    GameObject parent;
+    int ticks;
+    void delegate() voidAction;
+
+public:
+    this(GameObject gameObject)
+    {
+        parent = gameObject;
+        ticks = -1;
+    }
+
+    void scheduleActionAfterTicks(uint ticks, void delegate() action)
+    {
+        this.ticks = ticks;
+        this.voidAction = action;
+    }
+
+    void update()
+    {
+        if (ticks > -1)
+        {
+            ticks--;
+        }
+        if (ticks == 0)
+        {
+            if (voidAction !is null)
+            {
+                voidAction();
             }
         }
     }
@@ -1063,10 +1186,10 @@ private:
 
 public:
     this(IObjectContainer area, size_t x, size_t y, Direction direction,
-        int health, size_t minX, size_t maxX)
+         size_t minX, size_t maxX)
     {
-        super(area, x, y, direction, health);
-        addPixel('1', 0, 0, Direction.RIGHT);
+        super(area, x, y, direction, 1, 7, 0);
+        addPixel(to!dchar(to!string(_health)), 0, 0, Direction.RIGHT);
         addPixel('~', 1, 0, Direction.RIGHT);
         addPixel('{', 2, 0, Direction.RIGHT);
         addPixel('=', 3, 0, Direction.RIGHT);
@@ -1081,7 +1204,7 @@ public:
         addPixel('=', 4, 0, Direction.LEFT);
         addPixel('}', 5, 0, Direction.LEFT);
         addPixel('~', 6, 0, Direction.LEFT);
-        addPixel('1', 7, 0, Direction.LEFT);
+        addPixel(to!dchar(to!string(_health)), 7, 0, Direction.LEFT);
         recalculateProperties;
         _minX = minX;
         _maxX = maxX;
