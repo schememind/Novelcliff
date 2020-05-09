@@ -205,7 +205,11 @@ public:
     */
     override void finish(bool isSuccess)
     {
-        _ui.showFinishedGameMessage(isSuccess, _coinsCollected, 0);
+        _ui.showFinishedGameMessage(
+            isSuccess,
+            _coinsCollected,
+            _villainsEliminated
+        );
     }
 
     /**

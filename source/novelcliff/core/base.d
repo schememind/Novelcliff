@@ -18,16 +18,43 @@ private:
     int _health;
     size_t[2] healthPixelIndex;
 
+    void removeFromArea()
+    {
+        _area.removeVillain(this);
+    }
+
 public:
     this(IObjectContainer area, size_t x, size_t y, Direction direction,
-         int health, size_t leftHealthPixelIndex, size_t rightHealthPixelIndex)
+         int health, size_t leftHealthPixelIndex, size_t rightHealthPixelIndex,
+         size_t gravity=1)
     {
-        super(area, x, y, direction);
+        super(area, x, y, direction, gravity);
 
         // Health is displayed as a single char, thus it can only be 1 character long
         _health = health > 9 ? 9 : health;
         healthPixelIndex[Direction.LEFT] = leftHealthPixelIndex;
         healthPixelIndex[Direction.RIGHT] = rightHealthPixelIndex;
+    }
+
+    /// Remove itself with freezing, blinking and removing
+    void killItself(uint blinkCycles=3)
+    {
+        foreach (ref Pixel pixel; _pixels[Direction.LEFT])
+        {
+            pixel.isCollisionResponsive = false;
+        }
+        foreach (ref Pixel pixel; _pixels[Direction.RIGHT])
+        {
+            pixel.isCollisionResponsive = false;
+        }
+        _walkHandler.isMovingHorizontally = false;
+        _jumpHandler.jumpCycle = 0;
+        _throwHandler.throwCycle = 0;
+        _throwHandler.throwPhase = 0;
+        _scheduleHandler.voidAction = null;
+        _gravity = 0;
+        startBlinking(blinkCycles, '-');
+        schedule(blinkCycles * 2, delegate() { removeFromArea; });
     }
 
     @property int health()
@@ -523,7 +550,8 @@ public:
             y
                 + _gravity    // gravity
                 - _jumpHandler.calculateCoefficient
-                - _throwHandler.calculateCoefficient,
+                - _throwHandler.calculateCoefficient
+                ,
             true
         );
 
@@ -587,27 +615,6 @@ public:
             pixel._isVisible = false;
             pixel.isCollisionResponsive = false;
         }
-    }
-
-    /// Remove itself with freezing, blinking and removing
-    void killItself(uint blinkCycles=3)
-    {
-        foreach (ref Pixel pixel; _pixels[Direction.LEFT])
-        {
-            pixel.isCollisionResponsive = false;
-        }
-        foreach (ref Pixel pixel; _pixels[Direction.RIGHT])
-        {
-            pixel.isCollisionResponsive = false;
-        }
-        _walkHandler.isMovingHorizontally = false;
-        _jumpHandler.jumpCycle = 0;
-        _throwHandler.throwCycle = 0;
-        _throwHandler.throwPhase = 0;
-        _scheduleHandler.voidAction = null;
-        _gravity = 0;
-        startBlinking(blinkCycles, '-');
-        schedule(blinkCycles * 2, delegate() { remove; });
     }
 
     /// Schedule provided void method execution after provided ticks
@@ -868,6 +875,12 @@ private:
     uint jumpCycle;
     GameObject parent;
 
+    bool isCeilingHit()
+    {
+        return parent._yCollidedPixel !is null
+                && parent._yCollidedPixel.y < parent.y;
+    }
+
 public:
     this(GameObject gameObject)
     {
@@ -882,7 +895,7 @@ public:
 
     void startJump(uint height)
     {
-        if (height < 1 || !parent._isOnGround || jumpCycle > 0)
+        if (height < 1 || !parent._isOnGround || jumpCycle > 0 || isCeilingHit)
         {
             return;
         }
@@ -894,8 +907,7 @@ public:
     {
         if (jumpCycle > 0)
         {
-            if (parent._yCollidedPixel !is null
-                    && parent._yCollidedPixel.y < parent.y)
+            if (isCeilingHit)
             {
                 // Stop jumping progress if "ceiling" is hit with a head
                 jumpCycle = 0;
@@ -1176,6 +1188,83 @@ public:
         addPixel('_', 8, 5, Direction.RIGHT);
         addPixel('|', 9, 5, Direction.RIGHT);
         recalculateProperties;
+    }
+}
+
+class Spider : Villain
+{
+private:
+    size_t _minY, _maxY;
+    size_t _yMovement;
+    bool isMovingUp;
+
+public:
+    this(IObjectContainer area, size_t x, size_t y, size_t minY, size_t maxY)
+    {
+        super(area, x, y, Direction.RIGHT, 5, 12, 12, 0);
+        addPixel('\\', 0, 0, Direction.RIGHT);
+        addPixel('_', 1, 0, Direction.RIGHT);
+        addPixel('o', 2, 0, Direction.RIGHT);
+        addPixel('^', 3, 0, Direction.RIGHT);
+        addPixel('^', 4, 0, Direction.RIGHT);
+        addPixel('^', 5, 0, Direction.RIGHT);
+        addPixel('o', 6, 0, Direction.RIGHT);
+        addPixel('_', 7, 0, Direction.RIGHT);
+        addPixel('/', 8, 0, Direction.RIGHT);
+        addPixel('-', 0, 1, Direction.RIGHT);
+        addPixel('-', 1, 1, Direction.RIGHT);
+        addPixel('|', 2, 1, Direction.RIGHT);
+        addPixel(to!dchar(to!string(_health)), 4, 1, Direction.RIGHT);
+        addPixel('|', 6, 1, Direction.RIGHT);
+        addPixel('-', 7, 1, Direction.RIGHT);
+        addPixel('-', 8, 1, Direction.RIGHT);
+        addPixel('_', 0, 2, Direction.RIGHT);
+        addPixel('/', 1, 2, Direction.RIGHT);
+        addPixel('\\', 2, 2, Direction.RIGHT);
+        addPixel('_', 3, 2, Direction.RIGHT);
+        addPixel('_', 4, 2, Direction.RIGHT);
+        addPixel('_', 5, 2, Direction.RIGHT);
+        addPixel('/', 6, 2, Direction.RIGHT);
+        addPixel('\\', 7, 2, Direction.RIGHT);
+        addPixel('_', 8, 2, Direction.RIGHT);
+        copyPixelsBetweenDirections(Direction.RIGHT, Direction.LEFT, false);
+        recalculateProperties;
+        _minY = minY;
+        _maxY = maxY;
+        _yMovement = 1;
+    }
+
+    override void update()
+    {
+        super.update;
+        if (isMovingUp)
+        {
+            if (y <= _minY)
+            {
+                isMovingUp = false;
+            }
+            else
+            {
+                y -= _yMovement;
+            }
+        }
+        else
+        {
+            if (y >= _maxY)
+            {
+                isMovingUp = true;
+            }
+            else
+            {
+                y += _yMovement;
+            }
+        }
+    }
+
+    override void killItself(uint blinkCycles=3)
+    {
+        super.killItself(blinkCycles);
+        _yMovement = 0;
     }
 }
 

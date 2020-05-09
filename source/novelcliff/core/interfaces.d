@@ -79,6 +79,9 @@ interface IObjectContainer
     /// Actions to take when two GameObjects collide
     void handleCollision(GameObject gameObject1, GameObject gameObject2);
 
+    /// Remove villain from villains list
+    void removeVillain(Villain removableVillain);
+
     /// Return game that contains list of Areas, including this one
     @property IAreaListContainer game();
 }

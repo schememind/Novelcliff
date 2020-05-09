@@ -276,6 +276,7 @@ private:
 
         // Calculate number of objects to place in the Area
         size_t qty = cast(size_t)((yTo - yFrom) * probability);
+        qty = qty <= 0 ? 1 : qty;
         if (qty > slots.length)
         {
             qty = slots.length;
@@ -287,6 +288,56 @@ private:
         }
 
         return step;
+    }
+
+    void removeCoin(Coin removableCoin)
+    {
+        // TODO there must be more efficient ways of doing this
+        bool found = false;
+        size_t id = 0;
+
+        // Search for provided object in the list from which it would be removed
+        foreach (size_t currentId, ref Coin coin; _coins)
+        {
+            if (removableCoin == coin)
+            {
+                found = true;
+                id = currentId;
+                break;
+            }
+        }
+
+        // If provided object is found, remove it from the source list and put
+        // it in the destination list
+        if (found)
+        {
+            _coins = _coins[0..id] ~ _coins[id + 1..$];
+        }
+    }
+
+    void removeUpdatableObject(GameObject removableUpdatableObject)
+    {
+        // TODO there must be more efficient ways of doing this
+        bool found = false;
+        size_t id = 0;
+
+        // Search for provided object in the list from which it would be removed
+        foreach (size_t currentId, ref GameObject updatableObject; _updatableObjects)
+        {
+            if (removableUpdatableObject == updatableObject)
+            {
+                found = true;
+                id = currentId;
+                break;
+            }
+        }
+
+        // If provided object is found, remove it from the source list and put
+        // it in the destination list
+        if (found)
+        {
+            _updatableObjects = _updatableObjects[0..id] ~ _updatableObjects[id + 1..$];
+        }
     }
     
 public:
@@ -353,6 +404,52 @@ public:
         for (size_t i = uniform(0, step, rnd); i < freeSlots.length; i += step)
         {
             _coins ~= new Coin(this, freeSlots[i].x, freeSlots[i].y);
+        }
+
+        // Create and place Spiders
+        freeSlots = findSuitableSlots(
+            yFrom, yTo, 8, 1,
+            delegate(size_t checkX, size_t checkY)  // Along the TOP side
+            {
+                for (size_t sY = 1; sY <= 5; sY++)
+                {
+                    if (_game.renderer.pixelAt(checkX, checkY - sY) !is null)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }, true,  // all
+            delegate(size_t checkX, size_t checkY)  // Along the RIGHT side
+            {
+                return _game.renderer.pixelAt(checkX + 1, checkY) is null;
+            }, true, // all
+            delegate(size_t checkX, size_t checkY)  // Along the BOTTOM side
+            {
+                for (size_t sY = 1; sY <= 5; sY++)
+                {
+                    if (_game.renderer.pixelAt(checkX, checkY + sY) !is null)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }, true, // all
+            delegate(size_t checkX, size_t checkY)  // Along the LEFT side
+            {
+                return _game.renderer.pixelAt(checkX - 1, checkY) is null;
+            }, true // all
+        );
+        step = calculateStepSize(freeSlots, yFrom, yTo, 9, 0.10);  // TODO parametrize probability
+        for (size_t i = uniform(0, step, rnd); i < freeSlots.length; i += step)
+        {
+            _villains ~= new Spider(
+                this,
+                freeSlots[i].x,
+                freeSlots[i].y,
+                freeSlots[i].y - 5,
+                freeSlots[i].y + 3 + 5
+            );
         }
 
         // Create and place Swords
@@ -437,6 +534,11 @@ public:
     */
     override bool turnIntoStatic(GameObject gameObject)
     {
+        if (_updatableObjects.length == 0)
+        {
+            return false;
+        }
+
         // TODO there must be more efficient ways of doing this
         bool found = false;
         size_t id = 0;
@@ -446,7 +548,7 @@ public:
         // it has already been made updateble before, it means that this object
         // is most likely stored in the end of the updatable objects list, that's
         // why it is faster to iterate it backwards.
-        for (size_t currentId = _updatableObjects.length - 1; currentId >= 0; currentId--)
+        for (size_t currentId = _updatableObjects.length - 1; currentId == 0; currentId--)
         {
             if (_updatableObjects[currentId] == gameObject)
             {
@@ -510,13 +612,13 @@ public:
     /**
     Actions to take when two GameObjects collide
     */
-    void handleCollision(GameObject gameObject1, GameObject gameObject2)
+    override void handleCollision(GameObject gameObject1, GameObject gameObject2)
     {
         if (gameObject1 == _player)
         {
             if (Coin coin = cast(Coin) gameObject2)
             {
-                coin.remove;
+                removeCoin(coin);
                 // TODO remove coin from Area's list of coins for better performance
                 _game.coinsCollected = _game.coinsCollected + 1;
             }
@@ -532,7 +634,7 @@ public:
             {
                 if (!villain.isBlinking)
                 {
-                    gameObject1.remove;
+                    removeUpdatableObject(gameObject1);
                     villain.health = villain.health - 1;
                     if (villain.health <= 0)
                     {
@@ -547,7 +649,7 @@ public:
             {
                 if (!villain.isBlinking)
                 {
-                    gameObject2.remove;
+                    removeUpdatableObject(gameObject2);
                     villain.health = villain.health - 1;
                     if (villain.health <= 0)
                     {
@@ -555,6 +657,32 @@ public:
                     }
                 }
             }
+        }
+    }
+
+    /// Remove villain from villains list
+    override void removeVillain(Villain removableVillain)
+    {
+        // TODO there must be more efficient ways of doing this
+        bool found = false;
+        size_t id = 0;
+
+        // Search for provided object in the list from which it would be removed
+        foreach (size_t currentId, ref Villain villain; _villains)
+        {
+            if (removableVillain == villain)
+            {
+                found = true;
+                id = currentId;
+                break;
+            }
+        }
+
+        // If provided object is found, remove it from the source list and put
+        // it in the destination list
+        if (found)
+        {
+            _villains = _villains[0..id] ~ _villains[id + 1..$];
         }
     }
 
@@ -576,22 +704,42 @@ public:
             }
         }
 
+        // TODO repeating code
         foreach (ref GameObject updatableObject; _updatableObjects)
         {
             if (updatableObject.getY
                 + updatableObject.getHeight(updatableObject.direction) >= _bottomY)
             {
-                updatableObject.remove;
+                removeUpdatableObject(updatableObject);
             }
-            updatableObject.update;
+            else
+            {
+                updatableObject.update;
+            }
         }
         foreach (ref Coin coin; _coins)
         {
-            coin.update;
+            if (coin.getY
+                + coin.getHeight(coin.direction) >= _bottomY)
+            {
+                removeCoin(coin);
+            }
+            else
+            {
+                coin.update;
+            }
         }
         foreach (ref Villain villain; _villains)
         {
-            villain.update;
+            if (villain.getY
+                + villain.getHeight(villain.direction) >= _bottomY)
+            {
+                removeVillain(villain);
+            }
+            else
+            {
+                villain.update;
+            }
         }
     }
 
