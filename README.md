@@ -1,5 +1,7 @@
 # Novelcliff
-ASCII platformer game (still in progress).
+ASCII platformer game (still work in progress).
+
+Open any text file on your hard drive and it is then transformed into a platformer game with a goal to reach the bottom of the file, earning points by collecting coins and eliminating enemies.
 
 ![Alt Text](https://media.giphy.com/media/UpIo5gYhZ3eX0kMvqI/giphy.gif)
 
