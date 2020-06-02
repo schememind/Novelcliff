@@ -1201,7 +1201,7 @@ private:
 public:
     this(IObjectContainer area, size_t x, size_t y, size_t minY, size_t maxY)
     {
-        super(area, x, y, Direction.RIGHT, 5, 12, 12, 0);
+        super(area, x, y, Direction.RIGHT, 3, 12, 12, 0);
         addPixel('\\', 0, 0, Direction.RIGHT);
         addPixel('_', 1, 0, Direction.RIGHT);
         addPixel('o', 2, 0, Direction.RIGHT);

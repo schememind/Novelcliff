@@ -264,6 +264,11 @@ private:
         string fileName = openFileDialog.getResult;
         if (fileName !is null)
         {
+            // Define whether this is the first time a game is created in the
+            // current application session.
+            // This is required, because setIdleCommand must be called only once.
+            const bool firstSetOfIdleCommand = game is null;
+
             game = new Game(fileName, 120, 35, this);
             isRunning = true;
 
@@ -271,18 +276,21 @@ private:
             // getting rendered inside of other objects :)
             game.renderString;
 
-            mainWindow.setIdleCommand(
-                delegate(CommandArgs args)
-                {
-                    if (isRunning)
+            if (firstSetOfIdleCommand)
+            {
+                mainWindow.setIdleCommand(
+                    delegate(CommandArgs args)
                     {
-                        game.update;
-                        renderer.setText(game.renderString);
-                        mainWindow.setIdleCommand(args.callback, 70);
-                    }
-                },
-                70
-            );
+                        if (isRunning)
+                        {
+                            game.update;
+                            renderer.setText(game.renderString);
+                            mainWindow.setIdleCommand(args.callback, 70);
+                        }
+                    },
+                    70
+                );
+            }
         }
     }
 
