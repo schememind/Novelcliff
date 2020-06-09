@@ -3,6 +3,7 @@ module novelcliff.guitkd;
 import novelcliff.core;
 import tkd.tkdapplication;
 import std.conv: to;
+import std.stdio;
 
 /**
 Graphical User Interface for the game
@@ -59,7 +60,7 @@ protected:
         initLicenseDialog;
         initAboutDialog;
 
-        isRunning = false;
+        initGameAndStartGuiLoop;
     }
 
 private:
@@ -262,41 +263,58 @@ private:
             .addFileType("{{All files} {*}}")
             .show();
         string fileName = openFileDialog.getResult;
-        if (fileName !is null)
-        {
-            // Define whether this is the first time a game is created in the
-            // current application session.
-            // This is required, because setIdleCommand must be called only once.
-            const bool firstSetOfIdleCommand = game is null;
-
-            game = new Game(fileName, 120, 35, this);
-            isRunning = true;
-
-            // This seemingly unnecessary call somehow fixes a bug of coins
-            // getting rendered inside of other objects :)
-            game.renderString;
-
-            if (firstSetOfIdleCommand)
-            {
-                mainWindow.setIdleCommand(
-                    delegate(CommandArgs args)
-                    {
-                        if (isRunning)
-                        {
-                            game.update;
-                            renderer.setText(game.renderString);
-                            mainWindow.setIdleCommand(args.callback, 70);
-                        }
-                    },
-                    70
-                );
-            }
-        }
+        initGameAndStartGuiLoop(fileName);
     }
 
     void startTutorial(CommandArgs args)
     {
-        // TODO
+        if (isRunning)
+        {
+            // TODO show Yes/No dialog asking user if current game should be cancelled
+        }
+        initGameAndStartGuiLoop;
+    }
+
+    void initGameAndStartGuiLoop(string fileName=null)
+    {
+        // Define whether this is the first time a game is created in the
+        // current application session.
+        // This is required, because setIdleCommand must be called only once.
+        const bool firstSetOfIdleCommand = game is null;
+        
+        if (fileName !is null)
+        {
+            // Actual game
+            // TODO get rid of hardcoded width and height values
+            game = new Game(fileName, 120, 35, this);
+        }
+        else
+        {
+            // Tutorial
+            // TODO get rid of hardcoded width and height values
+            game = new Game(fileName, 81, 30, this);
+        }
+        isRunning = true;
+
+        // This seemingly unnecessary call somehow fixes a bug of coins
+        // getting rendered inside of other objects :)
+        game.renderString;
+
+        if (firstSetOfIdleCommand)
+        {
+            mainWindow.setIdleCommand(
+                delegate(CommandArgs args)
+                {
+                    if (isRunning)
+                    {
+                        game.update;
+                        renderer.setText(game.renderString);
+                    }
+                    mainWindow.setIdleCommand(args.callback, 70);
+                },
+                70
+            );
+        }
     }
 
     void exitApp(CommandArgs args)

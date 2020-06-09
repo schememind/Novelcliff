@@ -9,7 +9,7 @@ import std.stdio;
 void main()
 {
     string input;
-    Game game = new Game("C:\\Path\\to\\file.txt", 50, 45);
+    Game game = new Game("C:\\Users\\zansk\\coding\\D\\Novelcliff\\source\\novelcliff\\core\\enums.d", 50, 45);
     writeln(game.renderString);
     while (true)
     {

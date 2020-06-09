@@ -767,6 +767,30 @@ public:
         }
     }
 
+    /// Create new coin at provided coordinates
+    Coin addCoin(size_t x, size_t y)
+    {
+        Coin coin = new Coin(this, x, y);
+        _coins ~= coin;
+        return coin;
+    }
+
+    /// Create new Sword villain at provided coordinates
+    Sword addSword(size_t x, size_t y,
+                   size_t maxLeftDistance, size_t maxRightDistance)
+    {
+        Sword sword = new Sword(
+            this,
+            x,
+            y,
+            Direction.RIGHT,
+            x - maxLeftDistance,
+            x + 8 + maxRightDistance
+        );
+        _villains ~= sword;
+        return sword;
+    }
+
     /// Return game that contains list of Areas, including this one
     override @property IAreaListContainer game()
     {

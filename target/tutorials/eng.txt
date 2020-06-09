@@ -1,0 +1,52 @@
+.==============================================================================.
+|                                                                              |
+| Welcome to Novelcliff - open any text file and play it as a platformer game! |
+|                                                                              |
+|     If you are already familiar with the concepts of playing Novelcliff,     |
+|      feel free to go File -> New game and open any text file to play on.     |
+|       Otherwise you are advised to go through the little tutrial below:      |
+|                                                                              |
+'=============================================================================='
+
+1. That one is you down there, standing in the beginning of the file.
+                |
+                |
+                V                              
+                                                         
+                                     
+2. Use LEFT and RIGHT arrow keys to move.                
+    Use UP arrow key to jump.
+
+
+
+
+
+3. Jump over to this paragraph.
+  - Try picking up any word by pressing SPACE key while standing on it.
+  - Now try throwing away the word you've picked by pressing SPACE key again.
+Clear your way through this paragraph by throwing its words aside and fall down.
+By doing this you will reach the second part of the file.
+
+
+
+
+
+
+                                        ----------------------------------------
+
+                                    
+4. These three things up on this line are coins.
+   Collect those in order to earn points.
+
+
+
+
+5. Every file is inhabited by enemies, that you are not allowed to touch.
+   Those can be either avoided or killed by throwing words at them.
+   
+   
+   
+   
+   
+Pick up any word (use SPACE key) and throw it at this enemy (use SPACE key).
+Reach the house in the bottom of the file in order to finish the game.

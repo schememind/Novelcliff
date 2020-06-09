@@ -91,18 +91,25 @@ private:
     }
 
 public:
+    /**
+    Create new game from provided fileName.
+    Tutorial is constructed if fileName is null.
+    */
     this(string fileName, size_t rendererWidth=120, size_t rendererHeight=45,
          IUserInterface ui=null)
     {
         _ui = ui;
 
-        // If length of the longest line in the file is shorter than provided
-        // renderer width, then renderer width is shrinked to the length of the
-        // longest line in the file.
-        const size_t maxLineLength = getMaxLineLength(fileName);
-        if (maxLineLength < rendererWidth)
+        if (fileName !is null)
         {
-            rendererWidth = maxLineLength;
+            // If length of the longest line in the file is shorter than provided
+            // renderer width, then renderer width is shrinked to the length of
+            // the longest line in the file.
+            const size_t maxLineLength = getMaxLineLength(fileName);
+            if (maxLineLength < rendererWidth)
+            {
+                rendererWidth = maxLineLength;
+            }
         }
 
         // Create renderer
@@ -118,8 +125,22 @@ public:
         player.recalculateProperties;
         areas[0].player = player;
 
-        // Parse provided file + create game objects based on that parsing
-        parse(this, fileName, rendererWidth, rendererHeight, 7);
+        if (fileName !is null)
+        {
+            // Actual game
+            // Parse provided file + create game objects based on that parsing
+            parse(this, fileName, rendererWidth, rendererHeight, 5, 7, true);
+        }
+        else
+        {
+            // Tutorial
+            parse(this, "tutorials/eng.txt", rendererWidth, rendererHeight, 0, 8, false);
+            player.setPosition(16, 14, false);
+            areas[1].addCoin(6, 3);
+            areas[1].addCoin(22, 3);
+            areas[1].addCoin(38, 3);
+            areas[1].addSword(30, 15, 10, 10);
+        }
 
         // Mark first and last Areas in the list
         areas[0].isFirst = true;

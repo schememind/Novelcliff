@@ -41,8 +41,9 @@ size_t getMaxLineLength(string fileName)
 Parse provided file to identify game objects, create game objects and places
 them into Areas
 */
-void parse(IAreaListContainer game, string fileName, size_t maxWidth, size_t maxHeight,
-           size_t finalSpaceHeight)
+void parse(IAreaListContainer game, string fileName,
+           size_t maxWidth, size_t maxHeight, size_t initialY,
+           size_t finalSpaceHeight, bool isCreateCoinsAndVillains=true)
 {
     import std.file: readText;
     import std.algorithm: canFind;
@@ -51,7 +52,7 @@ void parse(IAreaListContainer game, string fileName, size_t maxWidth, size_t max
     
     int parseType = NONE;
     size_t cursorX = 0;
-    size_t cursorY = 5;
+    size_t cursorY = initialY;
     GameObject gameobject;
 
     /**
@@ -121,11 +122,14 @@ void parse(IAreaListContainer game, string fileName, size_t maxWidth, size_t max
         {
             // Before switching create coins and villains
             // (all words have been placed at this moment)
-            game.activeArea.createCoinsAndVillains(5, cursorY);
+            if (isCreateCoinsAndVillains)
+            {
+                game.activeArea.createCoinsAndVillains(5, cursorY);
+            }
 
             // Create next area and switch focus to it
             game.createNextActiveArea;
-            cursorY = 5;
+            cursorY = initialY;
         }
     }
 
@@ -208,5 +212,8 @@ void parse(IAreaListContainer game, string fileName, size_t maxWidth, size_t max
     game.activeArea.createHouse(1, cursorY - 5);
 
     // Create coins and villains in the last area
-    game.activeArea.createCoinsAndVillains(5, cursorY - 5);
+    if (isCreateCoinsAndVillains)
+    {
+        game.activeArea.createCoinsAndVillains(initialY, cursorY - 5);
+    }
 }
