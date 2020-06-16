@@ -50,7 +50,14 @@ protected:
     {
         mainWindow.setTitle("Novelcliff");
         mainWindow.setGeometry(800, 600, 10, 10);
-        // mainWindow.setDefaultIcon([new EmbeddedPng!("icon.png")]);
+
+        // Path to icons folder defined inside dub.json --> dflags --> -J switch
+        mainWindow.setDefaultIcon([
+            new EmbeddedPng!("icon16.png"),
+            new EmbeddedPng!("icon24.png"),
+            new EmbeddedPng!("icon32.png"),
+            new EmbeddedPng!("icon64.png")
+        ]);
 
         initMenuBar;
         initHud;

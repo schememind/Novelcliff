@@ -19,6 +19,12 @@
 			"dependencies": {
                 "tkd": "~>1.1.13"
             },
+            "dflags": [
+                "-J=./res/icons/"
+            ],
+            "copyFiles": [
+                "./res/tutorials"
+            ],
             "postGenerateCommands-windows-x86": [
                 "copy $TCLTK_PACKAGE_DIR\\dist\\x86\\tcl86t.dll target\\tcl86t.dll /y",
                 "copy $TCLTK_PACKAGE_DIR\\dist\\x86\\tk86t.dll target\\tk86t.dll /y",
@@ -44,7 +50,10 @@
                 "source/novelcliff/guitkd/*"
 			],
 			"targetName": "novelcliff-dbg",
-			"targetPath": "./target/"
+            "targetPath": "./target/",
+            "copyFiles": [
+                "./res/tutorials"
+            ]
         }
     ]
 }
