@@ -614,7 +614,7 @@ public:
     */
     override void handleCollision(GameObject gameObject1, GameObject gameObject2)
     {
-        if (gameObject1 == _player)
+        if (gameObject1 == _player || gameObject2 == _player )
         {
             if (Coin coin = cast(Coin) gameObject2)
             {
@@ -626,6 +626,16 @@ public:
             {
                 _player.remove;
                 _game.finish(true);
+            }
+            else if (Villain villain = cast(Villain) gameObject2)
+            {
+                _player.remove;
+                _game.finish(false);
+            }
+            else if (Villain villain = cast(Villain) gameObject1)
+            {
+                _player.remove;
+                _game.finish(false);
             }
         }
         else if (gameObject1.isThrownWeapon)
@@ -789,6 +799,18 @@ public:
         );
         _villains ~= sword;
         return sword;
+    }
+
+    /// Return current number of coins in the Area
+    ulong coinsTotal()
+    {
+        return _coins.length;
+    }
+
+    /// Return current number of villains in the Area
+    ulong villainsTotal()
+    {
+        return _villains.length;
     }
 
     /// Return game that contains list of Areas, including this one

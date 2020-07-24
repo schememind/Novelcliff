@@ -31,16 +31,31 @@ public:
         areaTotalValue.setText(to!string(areasTotal));
     }
 
-    override void showFinishedGameMessage(bool isSuccess, uint coins, uint villains)
+    override void showFinishedGameMessage(bool isSuccess,
+                                          uint coins, uint villains,
+                                          uint coinsTotal, uint villainsTotal)
     {
         isRunning = false;
+        double actuals = cast(double) coins + villains;
+        double totals = coinsTotal + villainsTotal;
+        if (totals == 0)
+        {
+            totals = actuals;    // handle division by zero
+        }
+        const uint totalScore = cast(uint) (actuals / totals * 100);
         new MessageDialog(mainWindow, "Done")
             .setMessage(
                 isSuccess
-                    ? "Congratulations!\n\n" ~ to!string(coins) ~ " coins collected\n"
-                        ~ to!string(villains) ~ " villains eliminated"
-                    : "Fail!\n\n" ~ to!string(coins) ~ " coins collected\n"
-                        ~ to!string(villains) ~ " villains eliminated"
+                    ? "GOOD JOB\n\n" ~ "Coins collected: " ~ to!string(coins)
+                        ~ " of " ~ to!string(coinsTotal)
+                        ~ "\nVillains eliminated: " ~ to!string(villains)
+                        ~ " of " ~ to!string(villainsTotal) ~ "\n\n"
+                        ~ "TOTAL SCORE: " ~ to!string(totalScore) ~ "%"
+                    : "FAIL\n\n" ~ "Coins collected: " ~ to!string(coins)
+                        ~ " of " ~ to!string(coinsTotal)
+                        ~ "\nVillains eliminated: " ~ to!string(villains)
+                        ~ " of " ~ to!string(villainsTotal) ~ "\n\n"
+                        ~ "TOTAL SCORE: " ~ to!string(totalScore) ~ "%"
             )
             .show;
     }

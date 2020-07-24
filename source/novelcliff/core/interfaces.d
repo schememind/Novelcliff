@@ -25,7 +25,8 @@ interface IUserInterface
     void displayAreasTotal(size_t areasTotal);
 
     /// Show message about finishing current game
-    void showFinishedGameMessage(bool isSuccess, uint coins, uint villains);
+    void showFinishedGameMessage(bool isSuccess, uint coins, uint villains,
+                                 uint coinsTotal, uint villainsTotal);
 }
 
 /**

@@ -13,7 +13,8 @@
             "mainSourceFile": "source/novelcliff/guitkd/app.d",
             "excludedSourceFiles": [
                 "source/novelcliff/dbg/*"
-			],
+            ],
+            "workingDirectory": "./target",
 			"targetName": "novelcliff",
 			"targetPath": "./target/",
 			"dependencies": {
@@ -22,6 +23,10 @@
             "dflags": [
                 "-J=./res/icons/"
             ],
+            "lflags":[
+                "-subsystem:windows",
+                "-entry:mainCRTStartup"
+             ],
             "copyFiles": [
                 "./res/tutorials"
             ],

@@ -33,9 +33,11 @@ private:
 
     // The amount of coins collected by the player during current game
     uint _coinsCollected;
+    uint _coinsTotal;
 
     // The amount of villains eliminated by the player during current game
     uint _villainsEliminated;
+    uint _villainsTotal;
 
     void handleInput()
     {
@@ -147,6 +149,13 @@ public:
         areas[$ - 1].isLast = true;
         activeAreaId = 0;
 
+        // Calculate total number of coins and villains
+        foreach (ref Area area; areas)
+        {
+            _coinsTotal += area.coinsTotal;
+            _villainsTotal += area.villainsTotal;
+        }
+
         // Display total number of areas on UI
         if (_ui !is null)
         {
@@ -229,7 +238,9 @@ public:
         _ui.showFinishedGameMessage(
             isSuccess,
             _coinsCollected,
-            _villainsEliminated
+            _villainsEliminated,
+            _coinsTotal,
+            _villainsTotal
         );
     }
 
