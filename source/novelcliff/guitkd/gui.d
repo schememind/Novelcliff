@@ -4,6 +4,24 @@ import novelcliff.core;
 import tkd.tkdapplication;
 import std.conv: to;
 import std.stdio;
+import dprefhandler;
+
+private
+{
+    static const string WIN_X = "win.x";
+    static const string WIN_Y = "win.y";
+    static const string WIN_W = "win.w";
+    static const string WIN_H = "win.h";
+    static const string WIN_FULLSCREEN = "win.fullscreen";
+    static const string FRAME_DELAY = "frame.delay";
+    static const string FONT_NAME = "font.name";
+    static const string FONT_SIZE = "font.size";
+    static const string RENDERER_W = "renderer.w";
+    static const string RENDERER_H = "renderer.h";
+    static const string COIN_DENSITY = "coin.density";
+    static const string SPIDER_DENSITY = "spider.density";
+    static const string SWORD_DENSITY = "sword.density";
+}
 
 /**
 Graphical User Interface for the game
@@ -63,8 +81,32 @@ public:
 protected:
     override void initInterface()
     {
+        // Create default preferences and fill its actual values from config file
+        prefHandler = new DPrefHandler("novelcliff");
+        prefHandler
+            .addPref!int(WIN_X, 45)
+            .addPref!int(WIN_Y, 30)
+            .addPref!int(WIN_W, 800)
+            .addPref!int(WIN_H, 600)
+            .addPref!bool(WIN_FULLSCREEN, false)
+            .addPref!int(FRAME_DELAY, 70)
+            .addPref!string(FONT_NAME, "Consolas")
+            .addPref!int(FONT_SIZE, 11)
+            .addPref!size_t(RENDERER_W, 120)
+            .addPref!size_t(RENDERER_H, 35)
+            .addPref!float(COIN_DENSITY, 0.5)
+            .addPref!float(SPIDER_DENSITY, 0.1)
+            .addPref!float(SWORD_DENSITY, 0.3)
+        ;
+        prefHandler.loadFromFile;
+
         mainWindow.setTitle("Novelcliff");
-        mainWindow.setGeometry(800, 600, 10, 10);
+        mainWindow.setGeometry(
+            prefHandler.getActualValue!int(WIN_W),
+            prefHandler.getActualValue!int(WIN_H),
+            prefHandler.getActualValue!int(WIN_X),
+            prefHandler.getActualValue!int(WIN_Y)
+        );
 
         // Path to icons folder defined inside dub.json --> dflags --> -J switch
         mainWindow.setDefaultIcon([
@@ -73,6 +115,9 @@ protected:
             new EmbeddedPng!("icon32.png"),
             new EmbeddedPng!("icon64.png")
         ]);
+
+        // Action to perform when X button is clicked
+        mainWindow.setProtocolCommand("WM_DELETE_WINDOW", &exitApp);
 
         initMenuBar;
         initHud;
@@ -87,6 +132,7 @@ protected:
 
 private:
     Game game;
+    DPrefHandler prefHandler;
     Label renderer, coinValue, villainValue, areaCurrentValue, areaTotalValue;
     MessageDialog licenseDialog, aboutDialog;
     bool isRunning;
@@ -100,6 +146,10 @@ private:
             .addEntry("Tutorial", &startTutorial)
             .addSeparator()
             .addEntry("Exit", &exitApp);
+
+        new Menu(menuBar, "Edit", 0)
+            .addEntry("Preferences", &showConfigWindow);
+            // TODO Mac style preferences menu
         
         new Menu(menuBar, "Help", 0)
             .addEntry("Tutorial", &startTutorial)
@@ -307,14 +357,28 @@ private:
         if (fileName !is null)
         {
             // Actual game
-            // TODO get rid of hardcoded width and height values
-            game = new Game(fileName, 120, 35, this);
+            game = new Game(
+                fileName,
+                prefHandler.getActualValue!size_t(RENDERER_W),
+                prefHandler.getActualValue!size_t(RENDERER_H),
+                prefHandler.getActualValue!float(COIN_DENSITY),
+                prefHandler.getActualValue!float(SWORD_DENSITY),
+                prefHandler.getActualValue!float(SPIDER_DENSITY),
+                this
+            );
         }
         else
         {
             // Tutorial
-            // TODO get rid of hardcoded width and height values
-            game = new Game(fileName, 81, 30, this);
+            game = new Game(
+                fileName,
+                81,
+                30,
+                0.0,
+                0.0,
+                0.0,
+                this
+            );
         }
         isRunning = true;
 
@@ -332,16 +396,29 @@ private:
                         game.update;
                         renderer.setText(game.renderString);
                     }
-                    mainWindow.setIdleCommand(args.callback, 70);
+                    mainWindow.setIdleCommand(
+                        args.callback,
+                        prefHandler.getActualValue!int(FRAME_DELAY)
+                    );
                 },
-                70
+                prefHandler.getActualValue!int(FRAME_DELAY)
             );
         }
     }
 
     void exitApp(CommandArgs args)
     {
+        prefHandler.setActualValue!int(WIN_X, mainWindow.getXPos);
+        prefHandler.setActualValue!int(WIN_Y, mainWindow.getYPos);
+        prefHandler.setActualValue!int(WIN_W, mainWindow.getWidth);
+        prefHandler.setActualValue!int(WIN_H, mainWindow.getHeight);
+        prefHandler.saveToFile;
         exit();
+    }
+
+    void showConfigWindow(CommandArgs args)
+    {
+        new ConfigWindow(mainWindow, prefHandler);
     }
 
     void showLicense(CommandArgs args)
@@ -352,5 +429,124 @@ private:
     void showAbout(CommandArgs args)
     {
         aboutDialog.show;
+    }
+}
+
+private class ConfigWindow : Window
+{
+    DPrefHandler _prefHandler;
+    Entry rendererWidth, rendererHeight, frameDelay;
+    Scale coinDensity, swordDensity, spiderDensity;
+
+    this(Window parent, DPrefHandler prefHandler)
+    {
+        super(parent, "Preferences");
+        _prefHandler = prefHandler;
+
+        Frame mainFrame = new Frame(this, 2, ReliefStyle.groove)
+            .pack(5, 5,
+                  GeometrySide.top, GeometryFill.both, AnchorPosition.northWest,
+                  true);
+        mainFrame.configureGeometryColumn(1, 1);
+
+        new Label(mainFrame, "Game area width: ").grid(0, 0);
+        rendererWidth = new Entry(mainFrame)
+                .grid(1, 0, 5, 0, 1, 1, "nsew")
+                .setValue(_prefHandler.getActualValue!string(RENDERER_W));
+
+        new Label(mainFrame, "Game area height: ").grid(0, 1);
+        rendererHeight = new Entry(mainFrame)
+                .grid(1, 1, 5, 0, 1, 1, "nsew")
+                .setValue(_prefHandler.getActualValue!string(RENDERER_H));
+        
+        new Label(mainFrame, "Coin density (%): ").grid(0, 2);
+        coinDensity = new Scale(mainFrame)
+                .setFromValue(0.0)
+                .setToValue(1.0)
+                .grid(1, 2, 5, 0, 1, 1, "nsew")
+                .setValue(_prefHandler.getActualValue!float(COIN_DENSITY));
+
+        new Label(mainFrame, "Sword density (%): ").grid(0, 3);
+        swordDensity = new Scale(mainFrame)
+                .setFromValue(0.0)
+                .setToValue(1.0)
+                .grid(1, 3, 5, 0, 1, 1, "nsew")
+                .setValue(_prefHandler.getActualValue!float(SWORD_DENSITY));
+
+        new Label(mainFrame, "Spider density (%): ").grid(0, 4);
+        spiderDensity = new Scale(mainFrame)
+                .setFromValue(0.0)
+                .setToValue(1.0)
+                .grid(1, 4, 5, 0, 1, 1, "nsew")
+                .setValue(_prefHandler.getActualValue!float(SPIDER_DENSITY));
+
+        new Label(mainFrame, "Frame delay (ms): ").grid(0, 5);
+        frameDelay = new Entry(mainFrame)
+                .grid(1, 5, 5, 0, 1, 1, "nsew")
+                .setValue(_prefHandler.getActualValue!string(FRAME_DELAY));
+
+        Frame buttonFrame = new Frame(this, 2)
+            .pack(5, 5,
+                  GeometrySide.top, GeometryFill.both, AnchorPosition.northWest,
+                  true);
+        Button okBtn = new Button(buttonFrame, "OK")
+                .setCommand(&saveAndExit)
+                .pack(0, 0, GeometrySide.left, GeometryFill.none, AnchorPosition.center, true);
+        Button resetBtn = new Button(buttonFrame, "Restore defaults")
+                .setCommand(&restoreDefaults)
+                .pack(0, 0, GeometrySide.left, GeometryFill.none, AnchorPosition.center, true);
+        Button cancelBtn = new Button(buttonFrame, "Cancel")
+                .setCommand(&cancel)
+                .pack(0, 0, GeometrySide.left, GeometryFill.none, AnchorPosition.center, true);
+
+        this.setGeometry(this.getWidth + 100, this.getHeight + 100,
+                         parent.getXPos + 50, parent.getYPos + 50);
+    }
+
+    void saveAndExit(CommandArgs args)
+    {
+        validate;
+        _prefHandler.setActualValue!string(RENDERER_W, rendererWidth.getValue);
+        _prefHandler.setActualValue!string(RENDERER_H, rendererHeight.getValue);
+        _prefHandler.setActualValue!float(COIN_DENSITY, coinDensity.getValue);
+        _prefHandler.setActualValue!float(SWORD_DENSITY, swordDensity.getValue);
+        _prefHandler.setActualValue!float(SPIDER_DENSITY, spiderDensity.getValue);
+        _prefHandler.setActualValue!string(FRAME_DELAY, frameDelay.getValue);
+        this.destroy;
+    }
+
+    /**
+    Set field values from default values of the configuration
+    */
+    void restoreDefaults(CommandArgs args)
+    {
+        rendererWidth.setValue(_prefHandler.getDefaultValue!string(RENDERER_W));
+        rendererHeight.setValue(_prefHandler.getDefaultValue!string(RENDERER_H));
+        coinDensity.setValue(_prefHandler.getDefaultValue!float(COIN_DENSITY));
+        swordDensity.setValue(_prefHandler.getDefaultValue!float(SWORD_DENSITY));
+        spiderDensity.setValue(_prefHandler.getDefaultValue!float(SPIDER_DENSITY));
+        frameDelay.setValue(_prefHandler.getDefaultValue!string(FRAME_DELAY));
+    }
+
+    /**
+    Close window without saving
+    */
+    void cancel(CommandArgs args)
+    {
+        this.destroy;
+    }
+
+    void validate()
+    {
+        try
+        {
+            to!size_t(rendererWidth.getValue);
+            to!size_t(rendererHeight.getValue);
+            to!int(frameDelay.getValue);
+        }
+        catch (Exception e)
+        {
+            throw new Exception("Invalid value");
+        }
     }
 }

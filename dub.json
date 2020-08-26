@@ -1,6 +1,6 @@
 {
-	"name": "novelcliff",
-	"configurations": [
+    "name": "novelcliff",
+    "configurations": [
         {
             "name": "gui",
             "authors": [
@@ -15,10 +15,11 @@
                 "source/novelcliff/dbg/*"
             ],
             "workingDirectory": "./target",
-			"targetName": "novelcliff",
-			"targetPath": "./target/",
-			"dependencies": {
-                "tkd": "~>1.1.13"
+            "targetName": "novelcliff",
+            "targetPath": "./target/",
+            "dependencies": {
+                "tkd": "~>1.1.13",
+                "dprefhandler": "~>0.0.1"
             },
             "dflags": [
                 "-J=./res/icons/"
@@ -53,8 +54,8 @@
             "mainSourceFile": "source/novelcliff/dbg/app.d",
             "excludedSourceFiles": [
                 "source/novelcliff/guitkd/*"
-			],
-			"targetName": "novelcliff-dbg",
+            ],
+            "targetName": "novelcliff-dbg",
             "targetPath": "./target/",
             "copyFiles": [
                 "./res/tutorials"

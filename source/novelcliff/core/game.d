@@ -39,6 +39,9 @@ private:
     uint _villainsEliminated;
     uint _villainsTotal;
 
+    // Probabilities
+    float _coinProbability, _swordProbability, _spiderProbability;
+
     void handleInput()
     {
         if (receivedSignals[InputSignal.RIGHT_PRESS])
@@ -98,9 +101,13 @@ public:
     Tutorial is constructed if fileName is null.
     */
     this(string fileName, size_t rendererWidth=120, size_t rendererHeight=45,
+         float coinProbability=0.5, float swordProbability=0.3, float spiderProbability=0.1,
          IUserInterface ui=null)
     {
         _ui = ui;
+        _coinProbability = coinProbability;
+        _swordProbability = swordProbability;
+        _spiderProbability = spiderProbability;
 
         if (fileName !is null)
         {
@@ -118,7 +125,11 @@ public:
         _renderer = new Renderer(rendererWidth, rendererHeight);
 
         // Create first area
-        areas ~= new Area(this, _renderer.pixelGrid[0].length);
+        areas ~= new Area(
+            this,
+            _coinProbability, _swordProbability, _spiderProbability,
+            _renderer.pixelGrid[0].length
+        );
 
         // Create player and pass its reference to Area
         player = new LivingObject(areas[0], 1, 0, Direction.RIGHT, 1);
@@ -226,7 +237,12 @@ public:
     */
     override void createNextActiveArea()
     {
-        areas ~= new Area(this, player, _renderer.pixelGrid[0].length);
+        areas ~= new Area(
+            this,
+            player,
+            _coinProbability, _swordProbability, _spiderProbability,
+            _renderer.pixelGrid[0].length
+        );
         activeAreaId++;
     }
 

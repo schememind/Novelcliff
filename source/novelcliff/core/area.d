@@ -46,6 +46,9 @@ private:
     // Indicates whether this Area is the first/last one in the list of game Areas.
     bool _isFirst, _isLast;
 
+    // Probabilities
+    float _coinProbability, _swordProbability, _spiderProbability;
+
     /**
     Find suitable Slots based on given size and condition functions executed on
     every side of the slot.
@@ -341,16 +344,23 @@ private:
     }
     
 public:
-    this(IAreaListContainer game, LivingObject player, size_t bottomY)
+    this(IAreaListContainer game, LivingObject player,
+         float coinProbability, float swordProbability, float spiderProbability,
+         size_t bottomY)
     {
         _game = game;
         _player = player;
+        _coinProbability = coinProbability;
+        _swordProbability = swordProbability;
+        _spiderProbability = spiderProbability;
         _bottomY = bottomY;
     }
 
-    this(IAreaListContainer game, size_t bottomY)
+    this(IAreaListContainer game,
+         float coinProbability, float swordProbability, float spiderProbability,
+         size_t bottomY)
     {
-        this(game, null, bottomY);
+        this(game, null, coinProbability, swordProbability, spiderProbability, bottomY);
     }
 
     /**
@@ -400,7 +410,7 @@ public:
                 return _game.renderer.pixelAt(checkX - 1, checkY) is null;
             }, true // all
         );
-        step = calculateStepSize(freeSlots, yFrom, yTo, 1, 0.50);  // TODO parametrize probability
+        step = calculateStepSize(freeSlots, yFrom, yTo, 1, _coinProbability);
         for (size_t i = uniform(0, step, rnd); i < freeSlots.length; i += step)
         {
             _coins ~= new Coin(this, freeSlots[i].x, freeSlots[i].y);
@@ -440,7 +450,7 @@ public:
                 return _game.renderer.pixelAt(checkX - 1, checkY) is null;
             }, true // all
         );
-        step = calculateStepSize(freeSlots, yFrom, yTo, 9, 0.10);  // TODO parametrize probability
+        step = calculateStepSize(freeSlots, yFrom, yTo, 9, _spiderProbability);
         for (size_t i = uniform(0, step, rnd); i < freeSlots.length; i += step)
         {
             _villains ~= new Spider(
@@ -472,7 +482,7 @@ public:
                 return _game.renderer.pixelAt(checkX - 1, checkY) is null;
             }, true // all
         );
-        step = calculateStepSize(freeSlots, yFrom, yTo, 8, 0.30);  // TODO parametrize probability
+        step = calculateStepSize(freeSlots, yFrom, yTo, 8, _swordProbability);
         for (size_t i = uniform(0, step, rnd); i < freeSlots.length; i += step)
         {
             _villains ~= new Sword(
@@ -614,7 +624,7 @@ public:
     */
     override void handleCollision(GameObject gameObject1, GameObject gameObject2)
     {
-        if (gameObject1 == _player || gameObject2 == _player )
+        if (gameObject1 == _player)
         {
             if (Coin coin = cast(Coin) gameObject2)
             {
@@ -631,6 +641,20 @@ public:
             {
                 _player.remove;
                 _game.finish(false);
+            }
+        }
+        else if (gameObject2 == _player)
+        {
+            if (Coin coin = cast(Coin) gameObject1)
+            {
+                removeCoin(coin);
+                // TODO remove coin from Area's list of coins for better performance
+                _game.coinsCollected = _game.coinsCollected + 1;
+            }
+            else if (House house = cast(House) gameObject1)
+            {
+                _player.remove;
+                _game.finish(true);
             }
             else if (Villain villain = cast(Villain) gameObject1)
             {
