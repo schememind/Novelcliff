@@ -449,12 +449,12 @@ private class ConfigWindow : Window
                   true);
         mainFrame.configureGeometryColumn(1, 1);
 
-        new Label(mainFrame, "Game area width: ").grid(0, 0);
+        new Label(mainFrame, "Max area width: ").grid(0, 0);
         rendererWidth = new Entry(mainFrame)
                 .grid(1, 0, 5, 0, 1, 1, "nsew")
                 .setValue(_prefHandler.getActualValue!string(RENDERER_W));
 
-        new Label(mainFrame, "Game area height: ").grid(0, 1);
+        new Label(mainFrame, "Max area height: ").grid(0, 1);
         rendererHeight = new Entry(mainFrame)
                 .grid(1, 1, 5, 0, 1, 1, "nsew")
                 .setValue(_prefHandler.getActualValue!string(RENDERER_H));

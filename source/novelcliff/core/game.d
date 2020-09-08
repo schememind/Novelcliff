@@ -52,7 +52,7 @@ private:
             }
             player.isMovingHorizontally = true;
         }
-        if (receivedSignals[InputSignal.RIGHT_RELEASE])
+        else if (receivedSignals[InputSignal.RIGHT_RELEASE])
         {
             if (player.direction == Direction.RIGHT)
             {
@@ -68,7 +68,7 @@ private:
             }
             player.isMovingHorizontally = true;
         }
-        if (receivedSignals[InputSignal.LEFT_RELEASE])
+        else if (receivedSignals[InputSignal.LEFT_RELEASE])
         {
             if (player.direction == Direction.LEFT)
             {
