@@ -7,12 +7,12 @@ module novelcliff.core.base;
 
 import novelcliff.core.interfaces;
 import novelcliff.core.enums;
-import std.conv: to;
+import std.conv : to;
 
 /**
 Common class for any villain.
 */
-class Villain : GameObject
+abstract class Villain : GameObject
 {
 private:
     int _health;

@@ -379,7 +379,7 @@ public:
     */
     override void createCoinsAndVillains(size_t yFrom, size_t yTo)
     {
-        import std.random: Random, uniform;
+        import std.random : Random, uniform;
 
         if (yFrom >= yTo)
         {

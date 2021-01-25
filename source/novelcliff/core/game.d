@@ -44,7 +44,14 @@ private:
 
     void handleInput()
     {
-        if (receivedSignals[InputSignal.RIGHT_PRESS])
+        if (receivedSignals[InputSignal.RIGHT_RELEASE])
+        {
+            if (player.direction == Direction.RIGHT)
+            {
+                player.isMovingHorizontally = false;
+            }
+        }
+        else if (receivedSignals[InputSignal.RIGHT_PRESS])
         {
             if (player.direction != Direction.RIGHT)
             {
@@ -52,28 +59,21 @@ private:
             }
             player.isMovingHorizontally = true;
         }
-        else if (receivedSignals[InputSignal.RIGHT_RELEASE])
+
+        if (receivedSignals[InputSignal.LEFT_RELEASE])
         {
-            if (player.direction == Direction.RIGHT)
+            if (player.direction == Direction.LEFT)
             {
                 player.isMovingHorizontally = false;
             }
         }
-
-        if (receivedSignals[InputSignal.LEFT_PRESS])
+        else if (receivedSignals[InputSignal.LEFT_PRESS])
         {
             if (player.direction != Direction.LEFT)
             {
                 player.direction = Direction.LEFT;
             }
             player.isMovingHorizontally = true;
-        }
-        else if (receivedSignals[InputSignal.LEFT_RELEASE])
-        {
-            if (player.direction == Direction.LEFT)
-            {
-                player.isMovingHorizontally = false;
-            }
         }
 
         if (receivedSignals[InputSignal.JUMP_PRESS])

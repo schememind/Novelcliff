@@ -89,7 +89,7 @@ public:
             }
         }
     }
-    
+
     /**
     Generate and return dstring representation of the game
     */

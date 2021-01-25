@@ -2,7 +2,7 @@ module novelcliff.guitkd;
 
 import novelcliff.core;
 import tkd.tkdapplication;
-import std.conv: to;
+import std.conv : to;
 import std.stdio;
 import dprefhandler;
 
@@ -330,10 +330,21 @@ private:
         {
             // TODO show Yes/No dialog asking user if current game should be cancelled
         }
-        auto openFileDialog = new OpenFileDialog("Open text file for a game")
-            .setMultiSelection(false)
-            .addFileType("{{All files} {*}}")
-            .show();
+
+        version(OSX)
+        {
+            auto openFileDialog = new OpenFileDialog("Open text file for a game")
+                .setMultiSelection(false)
+                .show();
+        }
+        else
+        {
+            auto openFileDialog = new OpenFileDialog("Open text file for a game")
+                .setMultiSelection(false)
+                .addFileType("{{All files} {*}}")   // Mandatory on Windows and Linux, however it disables files on OSX
+                .show();
+        }
+
         string fileName = openFileDialog.getResult;
         initGameAndStartGuiLoop(fileName);
     }

@@ -21,8 +21,8 @@ Return length (symbol count) of the longest row in the file
 */
 size_t getMaxLineLength(string fileName)
 {
-    import std.string: replace;
-    import std.range.primitives: walkLength;
+    import std.string : replace;
+    import std.range.primitives : walkLength;
 
     size_t result = 1;
     File file = File(fileName, "r");
@@ -45,8 +45,8 @@ void parse(IAreaListContainer game, string fileName,
            size_t maxWidth, size_t maxHeight, size_t initialY,
            size_t finalSpaceHeight, bool isCreateCoinsAndVillains=true)
 {
-    import std.file: readText;
-    import std.algorithm: canFind;
+    import std.file : readText;
+    import std.algorithm : canFind;
 
     enum : int { NONE, WORD, NUMERIC, PUNCTUATION }
     
