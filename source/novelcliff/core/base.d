@@ -10,336 +10,6 @@ import novelcliff.core.enums;
 import std.conv : to;
 
 /**
-Common class for any villain.
-*/
-abstract class Villain : GameObject
-{
-private:
-    int _health;
-    size_t[2] healthPixelIndex;
-
-    void removeFromArea()
-    {
-        _area.removeVillain(this);
-    }
-
-public:
-    this(IObjectContainer area, size_t x, size_t y, Direction direction,
-         int health, size_t leftHealthPixelIndex, size_t rightHealthPixelIndex,
-         size_t gravity=1)
-    {
-        super(area, x, y, direction, gravity);
-
-        // Health is displayed as a single char, thus it can only be 1 character long
-        _health = health > 9 ? 9 : health;
-        healthPixelIndex[Direction.LEFT] = leftHealthPixelIndex;
-        healthPixelIndex[Direction.RIGHT] = rightHealthPixelIndex;
-    }
-
-    /// Remove itself with freezing, blinking and removing
-    void killItself(uint blinkCycles=3)
-    {
-        foreach (ref Pixel pixel; _pixels[Direction.LEFT])
-        {
-            pixel.isCollisionResponsive = false;
-        }
-        foreach (ref Pixel pixel; _pixels[Direction.RIGHT])
-        {
-            pixel.isCollisionResponsive = false;
-        }
-        _walkHandler.isMovingHorizontally = false;
-        _jumpHandler.jumpCycle = 0;
-        _throwHandler.throwCycle = 0;
-        _throwHandler.throwPhase = 0;
-        _scheduleHandler.voidAction = null;
-        _gravity = 0;
-        startBlinking(blinkCycles, '-');
-        schedule(blinkCycles * 2, delegate() { removeFromArea; });
-    }
-
-    @property int health()
-    {
-        return _health;
-    }
-
-    @property void health(int value)
-    {
-        // Normalize input value. Since health is displayed as a single char,
-        // it can only be 1 character long
-        if (value > 9)
-        {
-            value = 9;
-        }
-        else if (value < 0)
-        {
-            value = 0;
-        }
-
-        // If value is decreased, but the Villain is not yet killed
-        if (value < _health && value > 0)
-        {
-            startBlinking(3, '-');
-        }
-
-        _health = value;
-
-        // Render updated health value
-        _pixels[Direction.LEFT][healthPixelIndex[Direction.LEFT]]._symbol =
-            to!dchar(to!string(_health));
-        _pixels[Direction.RIGHT][healthPixelIndex[Direction.RIGHT]]._symbol =
-            to!dchar(to!string(_health));
-        
-        if (_health <= 0)
-        {
-            killItself;
-        }
-    }
-}
-
-/**
-Dynamic object that possesses "living" properties, e.g. health
-*/
-class LivingObject : GameObject
-{
-private:
-    GameObject _carriedObject;
-    int _capacity;
-    bool _isPreparedForPick, _isPreparedForDrop;
-
-    // Differency values used for storing differency between original and latest
-    // GameObject position in cases of picking other GamoObjects and thus getting
-    // their Pixels.
-    size_t xDiff, yDiff;
-
-    void pickObject(GameObject carriedObject)
-    {
-        if (_carriedObject !is null || carriedObject is null)
-        {
-            return;
-        }
-        
-        // Try to move picked object above the picking object and see if there
-        // are any obstacles.
-        size_t carriedObjectInitialY = carriedObject.y;
-        Pixel collidedPixel;
-        for (size_t pickY = carriedObject.y - 1;
-                pickY >= y - carriedObject.height[direction];
-                pickY--)
-        {
-            collidedPixel = carriedObject.setPosition(
-                carriedObject.x,
-                pickY,
-                true,
-                this
-            );
-            if (collidedPixel !is null)
-            {
-                if (collidedPixel.parent == this)
-                {
-                    collidedPixel = null;
-                }
-                else
-                {
-                    // If it is not possible to pick up GameObject due to
-                    // collision with other GameObject (except the one that picks
-                    // it up), bring carried object back to its initial Y position
-                    carriedObject.setPosition(
-                        carriedObject.x,
-                        carriedObjectInitialY,
-                        false
-                    );
-                    break;
-                }
-            }
-        }
-
-        if (collidedPixel is null)
-        {
-            // All clear to pick up an object, no obstacles detected:
-
-            // Move main object's position to picked object's position
-            yDiff = y - carriedObject.y;
-            y = carriedObject.y;
-            xDiff = x - carriedObject.x;
-            if (xDiff > 0)
-            {
-                x = carriedObject.x;
-            }
-
-            // Lower all current main object's relative Pixel positions
-            foreach (ref Pixel pixel; _pixels[Direction.LEFT])
-            {
-                pixel.relY += carriedObject.height[Direction.LEFT];
-                if (xDiff > 0)
-                {
-                    pixel.relX += xDiff;
-                }
-            }
-            foreach (ref Pixel pixel; _pixels[Direction.RIGHT])
-            {
-                pixel.relY += carriedObject.height[Direction.RIGHT];
-                if (xDiff > 0)
-                {
-                    pixel.relX += xDiff;
-                }
-            }
-
-            // Take ownership of picked object Pixels
-            foreach (ref Pixel pixel; carriedObject._pixels[Direction.LEFT])
-            {
-                pixel.parent = this;
-            }
-            foreach (ref Pixel pixel; carriedObject._pixels[Direction.RIGHT])
-            {
-                pixel.parent = this;
-            }
-            _pixels[Direction.LEFT] ~= carriedObject._pixels[Direction.LEFT];
-            _pixels[Direction.RIGHT] ~= carriedObject._pixels[Direction.RIGHT];
-            carriedObject._pixels[Direction.LEFT] = [];
-            carriedObject._pixels[Direction.RIGHT] = [];
-
-            // Set picked object as carrried object of this game object
-            _carriedObject = carriedObject;
-
-            recalculateProperties;
-
-            _area.makeTransferableStatic(_carriedObject);
-        }
-        else
-        {
-            // Not possible to pick up an object due to obstacles
-            _area.turnIntoUpdatable(collidedPixel.parent);
-            _area.turnIntoUpdatable(carriedObject);
-            collidedPixel.parent.startBlinking(2, '-');
-            carriedObject.startBlinking(2, '-');
-            // TODO turn both objects back to static
-        }
-    }
-
-    void dropObject()
-    {
-        // Variables to store indexes of first carried object's Pixels
-        size_t leftFirstCarriedPixelIndex = 0;
-        size_t rightFirstCarriedPixelIndex = 0;
-
-        // Give ownership of picked object Pixels back to picked object
-        foreach (size_t index, ref Pixel pixel; _pixels[Direction.LEFT])
-        {
-            if (pixel.originalParent == _carriedObject)
-            {
-                pixel.parent = _carriedObject;
-                if (leftFirstCarriedPixelIndex == 0)
-                {
-                    leftFirstCarriedPixelIndex = index;
-                }
-            }
-        }
-        foreach (size_t index, ref Pixel pixel; _pixels[Direction.RIGHT])
-        {
-            if (pixel.originalParent == _carriedObject)
-            {
-                pixel.parent = _carriedObject;
-                if (rightFirstCarriedPixelIndex == 0)
-                {
-                    rightFirstCarriedPixelIndex = index;
-                }
-            }
-        }
-        _carriedObject._pixels[Direction.LEFT] ~= _pixels[Direction.LEFT][leftFirstCarriedPixelIndex..$];
-        _carriedObject._pixels[Direction.RIGHT] ~= _pixels[Direction.RIGHT][rightFirstCarriedPixelIndex..$];
-        _pixels[Direction.LEFT] = _pixels[Direction.LEFT][0..leftFirstCarriedPixelIndex];
-        _pixels[Direction.RIGHT] = _pixels[Direction.RIGHT][0..rightFirstCarriedPixelIndex];
-
-        // Place carried object (that was previously left at its place without
-        // Pixels) at the current position
-        _carriedObject.x = x;
-        _carriedObject.y = y;
-        _carriedObject._direction = _direction; 
-
-        // Reset back X and Y postion to original values
-        x += xDiff;
-        y += yDiff;
-        foreach (ref Pixel pixel; _pixels[Direction.LEFT])
-        {
-            pixel.relY -= yDiff;
-            if (xDiff > 0)
-            {
-                pixel.relX -= xDiff;
-            }
-        }
-        foreach (ref Pixel pixel; _pixels[Direction.RIGHT])
-        {
-            pixel.relY -= yDiff;
-            if (xDiff > 0)
-            {
-                pixel.relX -= xDiff;
-            }
-        }
-
-        // Prepare carried object to be thrown in the next game loop iteration
-        _carriedObject.startThrowingItself(2);
-
-        _area.removeFromTransferableStatic(_carriedObject);
-        
-        // Reset carried object to null
-        _carriedObject = null;
-
-        recalculateProperties;
-    }
-
-public:
-    this(IObjectContainer area, size_t x, size_t y, Direction direction,
-         int capacity)
-    {
-        super(area, x, y, direction);
-        _capacity = capacity;
-    }
-
-    override void update()
-    {
-        super.update;
-
-        // Handle object picking
-        if (_isPreparedForPick && _yCollidedPixel !is null)
-        {
-            // TODO not sure if this casting is efficient
-            pickObject(_yCollidedPixel.parent);
-        }
-
-        // Handle object dropping
-        if (_isPreparedForDrop && _carriedObject !is null)
-        {
-            dropObject;
-        }
-
-        // Reset preparedForPick status every frame to prevent cases when
-        // this status is set during a free fall and after multiple update
-        // cycles, when game object is landed on another object, this object
-        // gets picked automatically.
-        _isPreparedForPick = false;
-        _isPreparedForDrop = false;
-    }
-
-    /**
-    Depending on whether object is currently "carrying" another one, prepare
-    object to start picking or dropping in the next iteration of the game loop.
-    */
-    void prepareToPickOrDrop()
-    {
-        _isPreparedForPick = (_carriedObject is null);
-        _isPreparedForDrop = !(_carriedObject is null);
-    }
-
-    /**
-    Return GameObject that is currently being "carried" by this GameObject
-    */
-    @property GameObject carriedObject()
-    {
-        return _carriedObject;
-    }
-}
-
-/**
 Game object that has position, dimensions, direction and consists of symbols (characters)
 */
 class GameObject
@@ -700,6 +370,250 @@ public:
 }
 
 /**
+Dynamic object that possesses "living" properties, e.g. health
+*/
+class LivingObject : GameObject
+{
+    private:
+    GameObject _carriedObject;
+    int _capacity;
+    bool _isPreparedForPick, _isPreparedForDrop;
+
+    // Differency values used for storing differency between original and latest
+    // GameObject position in cases of picking other GamoObjects and thus getting
+    // their Pixels.
+    size_t xDiff, yDiff;
+
+    void pickObject(GameObject carriedObject)
+    {
+        if (_carriedObject !is null || carriedObject is null)
+        {
+            return;
+        }
+
+        // Try to move picked object above the picking object and see if there
+        // are any obstacles.
+        size_t carriedObjectInitialY = carriedObject.y;
+        Pixel collidedPixel;
+        for (size_t pickY = carriedObject.y - 1;
+        pickY >= y - carriedObject.height[direction];
+        pickY--)
+        {
+            collidedPixel = carriedObject.setPosition(
+            carriedObject.x,
+            pickY,
+            true,
+            this
+            );
+            if (collidedPixel !is null)
+            {
+                if (collidedPixel.parent == this)
+                {
+                    collidedPixel = null;
+                }
+                else
+                {
+                    // If it is not possible to pick up GameObject due to
+                    // collision with other GameObject (except the one that picks
+                    // it up), bring carried object back to its initial Y position
+                    carriedObject.setPosition(
+                    carriedObject.x,
+                    carriedObjectInitialY,
+                    false
+                    );
+                    break;
+                }
+            }
+        }
+
+        if (collidedPixel is null)
+        {
+            // All clear to pick up an object, no obstacles detected:
+
+            // Move main object's position to picked object's position
+            yDiff = y - carriedObject.y;
+            y = carriedObject.y;
+            xDiff = x - carriedObject.x;
+            if (xDiff > 0)
+            {
+                x = carriedObject.x;
+            }
+            carriedObject.direction = this.direction;
+
+            // Lower all current main object's relative Pixel positions
+            foreach (ref Pixel pixel; _pixels[Direction.LEFT])
+            {
+                pixel.relY += carriedObject.height[Direction.LEFT];
+                if (xDiff > 0)
+                {
+                    pixel.relX += xDiff;
+                }
+            }
+            foreach (ref Pixel pixel; _pixels[Direction.RIGHT])
+            {
+                pixel.relY += carriedObject.height[Direction.RIGHT];
+                if (xDiff > 0)
+                {
+                    pixel.relX += xDiff;
+                }
+            }
+
+            // Take ownership of picked object Pixels
+            foreach (ref Pixel pixel; carriedObject._pixels[Direction.LEFT])
+            {
+                pixel.parent = this;
+            }
+            foreach (ref Pixel pixel; carriedObject._pixels[Direction.RIGHT])
+            {
+                pixel.parent = this;
+            }
+            _pixels[Direction.LEFT] ~= carriedObject._pixels[Direction.LEFT];
+            _pixels[Direction.RIGHT] ~= carriedObject._pixels[Direction.RIGHT];
+            carriedObject._pixels[Direction.LEFT] = [];
+            carriedObject._pixels[Direction.RIGHT] = [];
+
+            // Set picked object as carried object of this game object
+            _carriedObject = carriedObject;
+
+            recalculateProperties;
+
+            _area.makeTransferableStatic(_carriedObject);
+        }
+        else
+        {
+            // Not possible to pick up an object due to obstacles
+            _area.turnIntoUpdatable(collidedPixel.parent);
+            _area.turnIntoUpdatable(carriedObject);
+            collidedPixel.parent.startBlinking(2, '-');
+            carriedObject.startBlinking(2, '-');
+            // TODO turn both objects back to static
+        }
+    }
+
+    void dropObject()
+    {
+        // Variables to store indexes of first carried object's Pixels
+        size_t leftFirstCarriedPixelIndex = 0;
+        size_t rightFirstCarriedPixelIndex = 0;
+
+        // Give ownership of picked object Pixels back to picked object
+        foreach (size_t index, ref Pixel pixel; _pixels[Direction.LEFT])
+        {
+            if (pixel.originalParent == _carriedObject)
+            {
+                pixel.parent = _carriedObject;
+                if (leftFirstCarriedPixelIndex == 0)
+                {
+                    leftFirstCarriedPixelIndex = index;
+                }
+            }
+        }
+        foreach (size_t index, ref Pixel pixel; _pixels[Direction.RIGHT])
+        {
+            if (pixel.originalParent == _carriedObject)
+            {
+                pixel.parent = _carriedObject;
+                if (rightFirstCarriedPixelIndex == 0)
+                {
+                    rightFirstCarriedPixelIndex = index;
+                }
+            }
+        }
+        _carriedObject._pixels[Direction.LEFT] ~= _pixels[Direction.LEFT][leftFirstCarriedPixelIndex..$];
+        _carriedObject._pixels[Direction.RIGHT] ~= _pixels[Direction.RIGHT][rightFirstCarriedPixelIndex..$];
+        _pixels[Direction.LEFT] = _pixels[Direction.LEFT][0..leftFirstCarriedPixelIndex];
+        _pixels[Direction.RIGHT] = _pixels[Direction.RIGHT][0..rightFirstCarriedPixelIndex];
+
+        // Place carried object (that was previously left at its place without
+        // Pixels) at the current position
+        _carriedObject.x = x;
+        _carriedObject.y = y;
+        _carriedObject._direction = _direction;
+
+        // Reset back X and Y postion to original values
+        x += xDiff;
+        y += yDiff;
+        foreach (ref Pixel pixel; _pixels[Direction.LEFT])
+        {
+            pixel.relY -= yDiff;
+            if (xDiff > 0)
+            {
+                pixel.relX -= xDiff;
+            }
+        }
+        foreach (ref Pixel pixel; _pixels[Direction.RIGHT])
+        {
+            pixel.relY -= yDiff;
+            if (xDiff > 0)
+            {
+                pixel.relX -= xDiff;
+            }
+        }
+
+        // Prepare carried object to be thrown in the next game loop iteration
+        _carriedObject.startThrowingItself(2);
+
+        _area.removeFromTransferableStatic(_carriedObject);
+
+        // Reset carried object to null
+        _carriedObject = null;
+
+        recalculateProperties;
+    }
+
+    public:
+    this(IObjectContainer area, size_t x, size_t y, Direction direction,
+    int capacity)
+    {
+        super(area, x, y, direction);
+        _capacity = capacity;
+    }
+
+    override void update()
+    {
+        super.update;
+
+        // Handle object picking
+        if (_isPreparedForPick && _yCollidedPixel !is null)
+        {
+            // TODO not sure if this casting is efficient
+            pickObject(_yCollidedPixel.parent);
+        }
+
+        // Handle object dropping
+        if (_isPreparedForDrop && _carriedObject !is null)
+        {
+            dropObject;
+        }
+
+        // Reset preparedForPick status every frame to prevent cases when
+        // this status is set during a free fall and after multiple update
+        // cycles, when game object is landed on another object, this object
+        // gets picked automatically.
+        _isPreparedForPick = false;
+        _isPreparedForDrop = false;
+    }
+
+    /**
+    Depending on whether object is currently "carrying" another one, prepare
+    object to start picking or dropping in the next iteration of the game loop.
+    */
+    void prepareToPickOrDrop()
+    {
+        _isPreparedForPick = (_carriedObject is null);
+        _isPreparedForDrop = !(_carriedObject is null);
+    }
+
+    /**
+    Return GameObject that is currently being "carried" by this GameObject
+    */
+    @property GameObject carriedObject()
+    {
+        return _carriedObject;
+    }
+}
+
+/**
 Part of GameObject representing one particular symbol (character)
 */
 class Pixel
@@ -799,7 +713,6 @@ public:
             y = newY;
             isModified = false;
         }
-
 
         return anotherPixel;
     }
@@ -1191,11 +1104,98 @@ public:
     }
 }
 
+/**
+Common class for any villain.
+*/
+abstract class Villain : GameObject
+{
+    private:
+    int _health;
+    size_t[2] healthPixelIndex;
+
+    void removeFromArea()
+    {
+        _area.removeVillain(this);
+    }
+
+    public:
+    this(IObjectContainer area, size_t x, size_t y, Direction direction,
+    int health, size_t leftHealthPixelIndex, size_t rightHealthPixelIndex,
+    size_t gravity=1)
+    {
+        super(area, x, y, direction, gravity);
+
+        // Health is displayed as a single char, thus it can only be 1 character long
+        _health = health > 9 ? 9 : health;
+        healthPixelIndex[Direction.LEFT] = leftHealthPixelIndex;
+        healthPixelIndex[Direction.RIGHT] = rightHealthPixelIndex;
+    }
+
+    /// Remove itself with freezing, blinking and removing
+    void killItself(uint blinkCycles=3)
+    {
+        foreach (ref Pixel pixel; _pixels[Direction.LEFT])
+        {
+            pixel.isCollisionResponsive = false;
+        }
+        foreach (ref Pixel pixel; _pixels[Direction.RIGHT])
+        {
+            pixel.isCollisionResponsive = false;
+        }
+        _walkHandler.isMovingHorizontally = false;
+        _jumpHandler.jumpCycle = 0;
+        _throwHandler.throwCycle = 0;
+        _throwHandler.throwPhase = 0;
+        _scheduleHandler.voidAction = null;
+        _gravity = 0;
+        startBlinking(blinkCycles, '-');
+        schedule(blinkCycles * 2, delegate() { removeFromArea; });
+    }
+
+    @property int health()
+    {
+        return _health;
+    }
+
+    @property void health(int value)
+    {
+        // Normalize input value. Since health is displayed as a single char,
+        // it can only be 1 character long
+        if (value > 9)
+        {
+            value = 9;
+        }
+        else if (value < 0)
+        {
+            value = 0;
+        }
+
+        // If value is decreased, but the Villain is not yet killed
+        if (value < _health && value > 0)
+        {
+            startBlinking(3, '-');
+        }
+
+        _health = value;
+
+        // Render updated health value
+        _pixels[Direction.LEFT][healthPixelIndex[Direction.LEFT]]._symbol =
+        to!dchar(to!string(_health));
+        _pixels[Direction.RIGHT][healthPixelIndex[Direction.RIGHT]]._symbol =
+        to!dchar(to!string(_health));
+
+        if (_health <= 0)
+        {
+            killItself;
+        }
+    }
+}
+
 class Spider : Villain
 {
 private:
     size_t _minY, _maxY;
-    size_t _yMovement;
+    size_t _yStep;
     bool isMovingUp;
 
 public:
@@ -1231,40 +1231,31 @@ public:
         recalculateProperties;
         _minY = minY;
         _maxY = maxY;
-        _yMovement = 1;
+        _yStep = 1;
     }
 
     override void update()
     {
         super.update;
-        if (isMovingUp)
+        _yCollidedPixel = setPosition(
+            x,
+            y + (isMovingUp ? -_yStep : _yStep),
+            true
+        );
+        if (isMovingUp && (y <= _minY || _yCollidedPixel !is null))
         {
-            if (y <= _minY)
-            {
-                isMovingUp = false;
-            }
-            else
-            {
-                y -= _yMovement;
-            }
+            isMovingUp = false;
         }
-        else
+        else if (!isMovingUp && (y >= _maxY || _yCollidedPixel !is null || _isOnGround))
         {
-            if (y >= _maxY)
-            {
-                isMovingUp = true;
-            }
-            else
-            {
-                y += _yMovement;
-            }
+            isMovingUp = true;
         }
     }
 
     override void killItself(uint blinkCycles=3)
     {
         super.killItself(blinkCycles);
-        _yMovement = 0;
+        _yStep = 0;
     }
 }
 
