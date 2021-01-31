@@ -1246,7 +1246,8 @@ public:
         {
             isMovingUp = false;
         }
-        else if (!isMovingUp && (y >= _maxY || _yCollidedPixel !is null || _isOnGround))
+        else if (!isMovingUp && (y >= _maxY || _yCollidedPixel !is null || _isOnGround
+                 || y + height[_direction] >= _area.game.renderer.pixelGrid[0].length - 1))
         {
             isMovingUp = true;
         }
@@ -1256,6 +1257,59 @@ public:
     {
         super.killItself(blinkCycles);
         _yStep = 0;
+    }
+}
+
+class Bird : Villain
+{
+    private:
+    size_t _minX, _maxX;
+
+    public:
+    this(IObjectContainer area, size_t x, size_t y, Direction direction,
+         size_t minX, size_t maxX)
+    {
+        super(area, x, y, direction, 2, 10, 7, 0);
+        addPixel('\\', 0, 0, Direction.RIGHT);
+        addPixel('\\', 1, 0, Direction.RIGHT);
+        addPixel('\\', 2, 0, Direction.RIGHT);
+        addPixel('\\', 3, 0, Direction.RIGHT);
+        addPixel('|', 0, 1, Direction.RIGHT);
+        addPixel('o', 2, 1, Direction.RIGHT);
+        addPixel('>', 4, 1, Direction.RIGHT);
+        addPixel(to!dchar(to!string(_health)), 0, 2, Direction.RIGHT);
+        addPixel('_', 1, 2, Direction.RIGHT);
+        addPixel('_', 2, 2, Direction.RIGHT);
+        addPixel('/', 3, 2, Direction.RIGHT);
+        addPixel('/', 1, 0, Direction.LEFT);
+        addPixel('/', 2, 0, Direction.LEFT);
+        addPixel('/', 3, 0, Direction.LEFT);
+        addPixel('/', 4, 0, Direction.LEFT);
+        addPixel('<', 0, 1, Direction.LEFT);
+        addPixel('o', 2, 1, Direction.LEFT);
+        addPixel('|', 4, 1, Direction.LEFT);
+        addPixel('\\', 1, 2, Direction.LEFT);
+        addPixel('_', 2, 2, Direction.LEFT);
+        addPixel('_', 3, 2, Direction.LEFT);
+        addPixel(to!dchar(to!string(_health)), 4, 2, Direction.LEFT);
+        recalculateProperties;
+        _minX = minX;
+        _maxX = maxX;
+        isMovingHorizontally = true;
+    }
+
+    override void update()
+    {
+        super.update;
+        if (x <= _minX || _xCollidedPixel !is null || x == 0)
+        {
+            direction = Direction.RIGHT;
+        }
+        else if (x >= _maxX || _xCollidedPixel !is null
+        || x + width[_direction] >= _area.game.renderer.pixelGrid.length - 1)
+        {
+            direction = Direction.LEFT;
+        }
     }
 }
 

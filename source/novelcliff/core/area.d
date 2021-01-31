@@ -47,7 +47,7 @@ private:
     bool _isFirst, _isLast;
 
     // Probabilities
-    float _coinProbability, _swordProbability, _spiderProbability;
+    float _coinProbability, _swordProbability, _spiderProbability, _birdProbability;
 
     /**
     Find suitable Slots based on given size and condition functions executed on
@@ -346,21 +346,23 @@ private:
 public:
     this(IAreaListContainer game, LivingObject player,
          float coinProbability, float swordProbability, float spiderProbability,
-         size_t bottomY)
+         float birdProbability, size_t bottomY)
     {
         _game = game;
         _player = player;
         _coinProbability = coinProbability;
         _swordProbability = swordProbability;
         _spiderProbability = spiderProbability;
+        _birdProbability = birdProbability;
         _bottomY = bottomY;
     }
 
     this(IAreaListContainer game,
          float coinProbability, float swordProbability, float spiderProbability,
-         size_t bottomY)
+         float birdProbability, size_t bottomY)
     {
-        this(game, null, coinProbability, swordProbability, spiderProbability, bottomY);
+        this(game, null, coinProbability, swordProbability, spiderProbability,
+             birdProbability, bottomY);
     }
 
     /**
@@ -418,7 +420,7 @@ public:
 
         // Create and place Spiders
         freeSlots = findSuitableSlots(
-            yFrom, yTo, 8, 1,
+            yFrom, yTo, 9, 3,
             delegate(size_t checkX, size_t checkY)  // Along the TOP side
             {
                 for (size_t sY = 1; sY <= 5; sY++)
@@ -458,7 +460,61 @@ public:
                 freeSlots[i].x,
                 freeSlots[i].y,
                 freeSlots[i].y - 5,
-                freeSlots[i].y + 3 + 5
+                (freeSlots[i].y + 5 < yTo ? freeSlots[i].y + 5 : yTo)
+            );
+        }
+
+        // Create and place Birds
+        freeSlots = findSuitableSlots(
+            yFrom, yTo, 5, 3,
+            delegate(size_t checkX, size_t checkY)  // Along the TOP side
+            {
+                return _game.renderer.pixelAt(checkX, checkY - 1) is null;
+            }, true,  // all
+            delegate(size_t checkX, size_t checkY)  // Along the RIGHT side
+            {
+                for (size_t sX = 1; sX <= 5; sX++)
+                {
+                    if (_game.renderer.pixelAt(checkX + sX, checkY) !is null)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }, true, // all
+            delegate(size_t checkX, size_t checkY)  // Along the BOTTOM side
+            {
+                for (size_t sY = 1; sY <= 3; sY++)
+                {
+                    if (_game.renderer.pixelAt(checkX, checkY + sY) !is null)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }, true, // all
+            delegate(size_t checkX, size_t checkY)  // Along the LEFT side
+            {
+                for (size_t sX = 1; sX <= 5; sX++)
+                {
+                    if (_game.renderer.pixelAt(checkX - sX, checkY) !is null)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }, true // all
+        );
+        step = calculateStepSize(freeSlots, yFrom, yTo, 5, _birdProbability);
+        for (size_t i = uniform(0, step, rnd); i < freeSlots.length; i += step)
+        {
+            _villains ~= new Bird(
+                this,
+                freeSlots[i].x,
+                freeSlots[i].y,
+                Direction.RIGHT,
+                freeSlots[i].x - 10,
+                (freeSlots[i].x + 10)
             );
         }
 

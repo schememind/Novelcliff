@@ -20,6 +20,7 @@ private
     static const string RENDERER_H = "renderer.h";
     static const string COIN_DENSITY = "coin.density";
     static const string SPIDER_DENSITY = "spider.density";
+    static const string BIRD_DENSITY = "bird.density";
     static const string SWORD_DENSITY = "sword.density";
 }
 
@@ -97,6 +98,7 @@ protected:
             .addPref!float(COIN_DENSITY, 0.5)
             .addPref!float(SPIDER_DENSITY, 0.1)
             .addPref!float(SWORD_DENSITY, 0.3)
+            .addPref!float(BIRD_DENSITY, 0.2)
         ;
         prefHandler.loadFromFile;
 
@@ -375,6 +377,7 @@ private:
                 prefHandler.getActualValue!float(COIN_DENSITY),
                 prefHandler.getActualValue!float(SWORD_DENSITY),
                 prefHandler.getActualValue!float(SPIDER_DENSITY),
+                prefHandler.getActualValue!float(BIRD_DENSITY),
                 this
             );
         }
@@ -385,6 +388,7 @@ private:
                 fileName,
                 81,
                 30,
+                0.0,
                 0.0,
                 0.0,
                 0.0,
@@ -447,7 +451,7 @@ private class ConfigWindow : Window
 {
     DPrefHandler _prefHandler;
     Entry rendererWidth, rendererHeight, frameDelay;
-    Scale coinDensity, swordDensity, spiderDensity;
+    Scale coinDensity, swordDensity, birdDensity, spiderDensity;
 
     this(Window parent, DPrefHandler prefHandler)
     {
@@ -484,16 +488,23 @@ private class ConfigWindow : Window
                 .grid(1, 3, 5, 0, 1, 1, "nsew")
                 .setValue(_prefHandler.getActualValue!float(SWORD_DENSITY));
 
-        new Label(mainFrame, "Spider density (%): ").grid(0, 4);
-        spiderDensity = new Scale(mainFrame)
+        new Label(mainFrame, "Bird density (%): ").grid(0, 4);
+        birdDensity = new Scale(mainFrame)
                 .setFromValue(0.0)
                 .setToValue(1.0)
                 .grid(1, 4, 5, 0, 1, 1, "nsew")
+                .setValue(_prefHandler.getActualValue!float(BIRD_DENSITY));
+
+        new Label(mainFrame, "Spider density (%): ").grid(0, 5);
+        spiderDensity = new Scale(mainFrame)
+                .setFromValue(0.0)
+                .setToValue(1.0)
+                .grid(1, 5, 5, 0, 1, 1, "nsew")
                 .setValue(_prefHandler.getActualValue!float(SPIDER_DENSITY));
 
-        new Label(mainFrame, "Frame delay (ms): ").grid(0, 5);
+        new Label(mainFrame, "Frame delay (ms): ").grid(0, 6);
         frameDelay = new Entry(mainFrame)
-                .grid(1, 5, 5, 0, 1, 1, "nsew")
+                .grid(1, 6, 5, 0, 1, 1, "nsew")
                 .setValue(_prefHandler.getActualValue!string(FRAME_DELAY));
 
         Frame buttonFrame = new Frame(this, 2)
@@ -521,6 +532,7 @@ private class ConfigWindow : Window
         _prefHandler.setActualValue!string(RENDERER_H, rendererHeight.getValue);
         _prefHandler.setActualValue!float(COIN_DENSITY, coinDensity.getValue);
         _prefHandler.setActualValue!float(SWORD_DENSITY, swordDensity.getValue);
+        _prefHandler.setActualValue!float(BIRD_DENSITY, birdDensity.getValue);
         _prefHandler.setActualValue!float(SPIDER_DENSITY, spiderDensity.getValue);
         _prefHandler.setActualValue!string(FRAME_DELAY, frameDelay.getValue);
         this.destroy;
@@ -535,6 +547,7 @@ private class ConfigWindow : Window
         rendererHeight.setValue(_prefHandler.getDefaultValue!string(RENDERER_H));
         coinDensity.setValue(_prefHandler.getDefaultValue!float(COIN_DENSITY));
         swordDensity.setValue(_prefHandler.getDefaultValue!float(SWORD_DENSITY));
+        birdDensity.setValue(_prefHandler.getDefaultValue!float(BIRD_DENSITY));
         spiderDensity.setValue(_prefHandler.getDefaultValue!float(SPIDER_DENSITY));
         frameDelay.setValue(_prefHandler.getDefaultValue!string(FRAME_DELAY));
     }

@@ -40,7 +40,7 @@ private:
     uint _villainsTotal;
 
     // Probabilities
-    float _coinProbability, _swordProbability, _spiderProbability;
+    float _coinProbability, _swordProbability, _spiderProbability, _birdProbability;
 
     void handleInput()
     {
@@ -102,12 +102,13 @@ public:
     */
     this(string fileName, size_t rendererWidth=120, size_t rendererHeight=45,
          float coinProbability=0.5, float swordProbability=0.3, float spiderProbability=0.1,
-         IUserInterface ui=null)
+         float birdProbability=0.1, IUserInterface ui=null)
     {
         _ui = ui;
         _coinProbability = coinProbability;
         _swordProbability = swordProbability;
         _spiderProbability = spiderProbability;
+        _birdProbability = birdProbability;
 
         if (fileName !is null)
         {
@@ -127,7 +128,7 @@ public:
         // Create first area
         areas ~= new Area(
             this,
-            _coinProbability, _swordProbability, _spiderProbability,
+            _coinProbability, _swordProbability, _spiderProbability, _birdProbability,
             _renderer.pixelGrid[0].length
         );
 
@@ -240,7 +241,7 @@ public:
         areas ~= new Area(
             this,
             player,
-            _coinProbability, _swordProbability, _spiderProbability,
+            _coinProbability, _swordProbability, _spiderProbability, _birdProbability,
             _renderer.pixelGrid[0].length
         );
         activeAreaId++;
