@@ -51,8 +51,8 @@ void parse(IAreaListContainer game, string fileName,
     enum : int { NONE, WORD, NUMERIC, PUNCTUATION }
     
     int parseType = NONE;
-    size_t cursorX = 0;
-    size_t cursorY = initialY;
+    size_t caretX = 0;
+    size_t caretY = initialY;
     GameObject gameobject;
 
     /**
@@ -87,16 +87,12 @@ void parse(IAreaListContainer game, string fileName,
 
             // Start creating new GameObject
             parseType = p_parseType;
-            gameobject = game.activeArea.createStaticObject(
-                cursorX,
-                cursorY,
-                Direction.RIGHT
-            );
+            gameobject = game.activeArea.createWord(caretX, caretY);
 
             // Add first Pixel to the newly created GameObject
             gameobject.addPixel(
                 p_char,
-                cursorX - gameobject.getX,
+                caretX - gameobject.getX,
                 0,
                 Direction.RIGHT
             );
@@ -107,7 +103,7 @@ void parse(IAreaListContainer game, string fileName,
             // Continue adding Pixels to already started object of the given type
             gameobject.addPixel(
                 p_char,
-                cursorX - gameobject.getX,
+                caretX - gameobject.getX,
                 0,
                 Direction.RIGHT
             );
@@ -116,34 +112,34 @@ void parse(IAreaListContainer game, string fileName,
 
     void switchToNextRow(size_t wordWrapOffset = 0)
     {
-        cursorX = 0 + wordWrapOffset;
-        cursorY++;
-        if (cursorY >= maxHeight)
+        caretX = 0 + wordWrapOffset;
+        caretY++;
+        if (caretY >= maxHeight)
         {
             // Before switching create coins and villains
             // (all words have been placed at this moment)
             if (isCreateCoinsAndVillains)
             {
-                game.activeArea.createCoinsAndVillains(5, cursorY);
+                game.activeArea.createCoinsAndVillains(5, caretY);
             }
 
             // Create next area and switch focus to it
             game.createNextActiveArea;
-            cursorY = initialY;
+            caretY = initialY;
         }
     }
 
     // Loop through each dchar in file
     foreach (dchar c; readText(fileName))
     {
-        if (cursorX >= maxWidth)
+        if (caretX >= maxWidth)
         {
             // Word wrap
             if (gameobject !is null)
             {
-                const size_t wordWrapOffset = cursorX - gameobject.getX;
+                const size_t wordWrapOffset = caretX - gameobject.getX;
                 switchToNextRow(wordWrapOffset);
-                gameobject.setPosition(cursorX - wordWrapOffset, cursorY, false);
+                gameobject.setPosition(caretX - wordWrapOffset, caretY, false);
             }
             else
             {
@@ -163,27 +159,27 @@ void parse(IAreaListContainer game, string fileName,
         else if (c == '\t')
         {
             finishCurrentObjectCreation;
-            cursorX += 4;
+            caretX += 4;
         }
         else if (c == ' ')
         {
             finishCurrentObjectCreation;
-            cursorX++;
+            caretX++;
         }
         else if (numerics.canFind(c))
         {
             handleSymbol(c, NUMERIC);
-            cursorX++;
+            caretX++;
         }
         else if (punctuation.canFind(c))
         {
             handleSymbol(c, PUNCTUATION);
-            cursorX++;
+            caretX++;
         }
         else
         {
             handleSymbol(c, WORD);
-            cursorX++;
+            caretX++;
         }
     }
 
@@ -193,11 +189,7 @@ void parse(IAreaListContainer game, string fileName,
     {
         switchToNextRow;
     }
-    gameobject = game.activeArea.createStaticObject(
-        cursorX,
-        cursorY,
-        Direction.RIGHT
-    );
+    gameobject = game.activeArea.createGround(caretY);
     for (size_t i = 0; i < maxWidth; i++)
     {
         gameobject.addPixel(
@@ -209,11 +201,11 @@ void parse(IAreaListContainer game, string fileName,
     }
 
     // House in the last Area
-    game.activeArea.createHouse(1, cursorY - 5);
+    game.activeArea.createHouse(1, caretY - 5);
 
     // Create coins and villains in the last area
     if (isCreateCoinsAndVillains)
     {
-        game.activeArea.createCoinsAndVillains(initialY, cursorY - 5);
+        game.activeArea.createCoinsAndVillains(initialY, caretY - 5);
     }
 }

@@ -2,11 +2,11 @@
     "name": "novelcliff",
     "configurations": [
         {
-            "name": "gui",
+            "name": "guitkd",
             "authors": [
                 "Žans Kļimovičs"
             ],
-            "copyright": "Copyright © 2020, Žans Kļimovičs",
+            "copyright": "Copyright © 2021, Žans Kļimovičs",
             "description": "Graphical user interface for the game (tkd)",
             "license": "MIT",
             "targetType": "executable",
@@ -24,10 +24,6 @@
             "dflags": [
                 "-J=./res/icons/"
             ],
-            "lflags":[
-                "-subsystem:windows",
-                "-entry:mainCRTStartup"
-             ],
             "copyFiles": [
                 "./res/tutorials"
             ],
@@ -47,7 +43,7 @@
             "authors": [
                 "Žans Kļimovičs"
             ],
-            "copyright": "Copyright © 2020, Žans Kļimovičs",
+            "copyright": "Copyright © 2021, Žans Kļimovičs",
             "description": "Used for step-by-stem game state debugging via command line",
             "license": "MIT",
             "targetType": "executable",

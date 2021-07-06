@@ -52,14 +52,17 @@ Interface for an Area: a container of lists of GameObjects of different types.
 */
 interface IObjectContainer
 {
-    /// Create and add static game object to the appropriate list
-    GameObject createStaticObject(size_t x, size_t y, Direction direction);
-
     /// Analyze empty space and randomly fill it with coins and villains in the specified range
     void createCoinsAndVillains(size_t yFrom, size_t yTo);
 
     /// Create and place a house at a given position
     House createHouse(size_t x, size_t y);
+
+    /// Create and place a word at a given position
+    Word createWord(size_t x, size_t y);
+
+    /// Create and place ground at a given position
+    Ground createGround(size_t y);
 
     /// Make game object updatable and return true if it was not previously updatable
     bool turnIntoUpdatable(GameObject gameObject);

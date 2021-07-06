@@ -1,6 +1,6 @@
 .==============================================================================.
 |                                                                              |
-| Welcome to Novelcliff - open any text file and play it as a platformer game! |
+|     Welcome to Novelcliff - a platformer game set in your own text files!    |
 |                                                                              |
 |     If you are already familiar with the concepts of playing Novelcliff,     |
 |      feel free to go File -> New game and open any text file to play on.     |

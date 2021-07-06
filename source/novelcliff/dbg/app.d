@@ -5,16 +5,19 @@ module novelcliff.dbg;
 
 import novelcliff.core;
 import std.stdio;
+import core.time : MonoTime, Duration;
 
 void main()
 {
     string input;
-    Game game = new Game("path/to/any/text/file.txt", 50, 45);
+    Game game = new Game("path/to/any/text/file.txt");
     writeln(game.renderString);
     while (true)
     {
         input = readln();
         
+        const MonoTime before = MonoTime.currTime;
+
         if (input[0] == 'q') {
             return;
         }
@@ -56,6 +59,18 @@ void main()
         }
         
         game.update;
+        const MonoTime afterUpdate = MonoTime.currTime;
+
         writeln(game.renderDstring);
+        const MonoTime afterRendering = MonoTime.currTime;
+
+        Duration updateTime = afterUpdate - before;
+        Duration renderingTime = afterRendering - afterUpdate;
+        Duration totalTime = afterRendering - before;
+
+        writeln("\n==========================");
+        writeln("Update time: ", updateTime);
+        writeln("Render time: ", renderingTime);
+        writeln("Total time elapsed: ", totalTime);
     }
 }

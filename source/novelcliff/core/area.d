@@ -18,7 +18,7 @@ private:
 
     // Reference to a single player object created in Game class,
     // so it means that each Area shares the same player!
-    LivingObject _player;
+    Player _player;
 
     // List of dynamic objects, except the player.
     // These objects require update in each iteration of the game loop.
@@ -344,7 +344,7 @@ private:
     }
     
 public:
-    this(IAreaListContainer game, LivingObject player,
+    this(IAreaListContainer game, Player player,
          float coinProbability, float swordProbability, float spiderProbability,
          float birdProbability, size_t bottomY)
     {
@@ -365,14 +365,18 @@ public:
              birdProbability, bottomY);
     }
 
-    /**
-    Create and add static game object to the appropriate list
-    */
-    override GameObject createStaticObject(size_t x, size_t y, Direction direction)
+    override Word createWord(size_t x, size_t y)
     {
-        GameObject gameObject = new GameObject(this, x, y, direction, 0);
-        _staticObjects ~= gameObject;
-        return gameObject;
+        Word word = new Word(this, x, y);
+        _staticObjects ~= word;
+        return word;
+    }
+
+    override Ground createGround(size_t y)
+    {
+        Ground ground = new Ground(this, y);
+        _staticObjects ~= ground;
+        return ground;
     }
 
     /**
@@ -906,7 +910,7 @@ public:
     }
 
     /// Set reference to player object
-    @property void player(LivingObject value)
+    @property void player(Player value)
     {
         _player = value;
     }

@@ -456,6 +456,7 @@ private class ConfigWindow : Window
     this(Window parent, DPrefHandler prefHandler)
     {
         super(parent, "Preferences");
+        setTopmost!ConfigWindow(true);
         _prefHandler = prefHandler;
 
         Frame mainFrame = new Frame(this, 2, ReliefStyle.groove)

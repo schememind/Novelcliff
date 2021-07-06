@@ -10,25 +10,25 @@ import novelcliff.core.enums;
 import std.conv : to;
 
 /**
-Game object that has position, dimensions, direction and consists of symbols (characters)
+Game object that consists of Pixels (characters) and has position, dimensions and direction.
 */
-class GameObject
+abstract class GameObject
 {
 private:
     // Current position at any given moment
     size_t x, y;
 
-    // It is possible for an object to have different set of pixels
-    // (and different dimensions) in different positions:
-    // width[0] for width when in LEFT direction,
-    // width[1] for width when in RIGHT direction.
+    // It is possible for an object to have different set of pixels (and different dimensions) in different positions:
+    // - width[0] for width when in LEFT direction,
+    // - width[1] for width when in RIGHT direction.
     size_t[2] width, height;
 
+    // Direction that GameObject is facing - affects such actions as movement, throwing, etc respectively
     Direction _direction;
     
     // Two dynamic arrays of Pixels as a single array:
-    // _pixels[0] for all LEFT direction Pixels,
-    // _pixels[1] for all RIGHT direction Pixels.
+    // - _pixels[0] for all LEFT direction Pixels,
+    // - _pixels[1] for all RIGHT direction Pixels.
     Pixel[][2] _pixels;
 
     // Area which GameObject belongs to
@@ -40,6 +40,8 @@ private:
     ThrowHandler _throwHandler;
     BlinkHandler _blinkHandler;
     ScheduleHandler _scheduleHandler;
+
+    // Indicates whether GameObject is standing on top of some other GameObject
     bool _isOnGround;
 
     // Pixels of other GameObjects that current GameObject is colliding with
@@ -50,8 +52,7 @@ private:
     size_t _gravity, _initialGravity;
     
 public:
-    this(IObjectContainer area, size_t x, size_t y, Direction direction,
-         size_t gravity=1)
+    this(IObjectContainer area, size_t x, size_t y, Direction direction, size_t gravity=1)
     {
         this._area = area;
         this.x = x;
@@ -114,8 +115,7 @@ public:
         height[Direction.RIGHT]++;
     }
 
-    Pixel setPosition(size_t newX, size_t newY, bool isCheckCollision,
-                        GameObject ignoredObject = null)
+    Pixel setPosition(size_t newX, size_t newY, bool isCheckCollision, GameObject ignoredObject = null)
     {
         if (newX == size_t.max
             || newX + width[_direction] >= _area.game.renderer.pixelGrid.length
@@ -181,8 +181,7 @@ public:
     /**
     Copy Pixels of one Direction to another Direction either with mirroring or not
     */
-    void copyPixelsBetweenDirections(Direction fromDirection, Direction toDirection,
-                                     bool isMirror)
+    void copyPixelsBetweenDirections(Direction fromDirection, Direction toDirection, bool isMirror)
     {
         foreach (ref Pixel pixel; _pixels[fromDirection])
         {
@@ -218,7 +217,7 @@ public:
         _yCollidedPixel = setPosition(
             x,
             y
-                + _gravity    // gravity
+                + _gravity
                 - _jumpHandler.calculateCoefficient
                 - _throwHandler.calculateCoefficient
                 ,
@@ -370,13 +369,12 @@ public:
 }
 
 /**
-Dynamic object that possesses "living" properties, e.g. health
+Player that can pick other objects
 */
-class LivingObject : GameObject
+class Player : GameObject
 {
-    private:
+private:
     GameObject _carriedObject;
-    int _capacity;
     bool _isPreparedForPick, _isPreparedForDrop;
 
     // Differency values used for storing differency between original and latest
@@ -395,15 +393,13 @@ class LivingObject : GameObject
         // are any obstacles.
         size_t carriedObjectInitialY = carriedObject.y;
         Pixel collidedPixel;
-        for (size_t pickY = carriedObject.y - 1;
-        pickY >= y - carriedObject.height[direction];
-        pickY--)
+        for (size_t pickY = carriedObject.y - 1; pickY >= y - carriedObject.height[direction]; pickY--)
         {
             collidedPixel = carriedObject.setPosition(
-            carriedObject.x,
-            pickY,
-            true,
-            this
+                carriedObject.x,
+                pickY,
+                true,
+                this
             );
             if (collidedPixel !is null)
             {
@@ -417,9 +413,9 @@ class LivingObject : GameObject
                     // collision with other GameObject (except the one that picks
                     // it up), bring carried object back to its initial Y position
                     carriedObject.setPosition(
-                    carriedObject.x,
-                    carriedObjectInitialY,
-                    false
+                        carriedObject.x,
+                        carriedObjectInitialY,
+                        false
                     );
                     break;
                 }
@@ -561,12 +557,10 @@ class LivingObject : GameObject
         recalculateProperties;
     }
 
-    public:
-    this(IObjectContainer area, size_t x, size_t y, Direction direction,
-    int capacity)
+public:
+    this(IObjectContainer area, size_t x, size_t y, Direction direction)
     {
         super(area, x, y, direction);
-        _capacity = capacity;
     }
 
     override void update()
@@ -676,12 +670,11 @@ public:
     Set position of the Pixel to provided new coordinates and return Pixel of
     another object that already occupies new position (if any).
     New position is not set if Pixel of another object exists at new poistion
-    and it is collision responsive.
+    and its Pixels are collision responsive.
     One GameObject can be passed as ignoredObject (null by default) in order to
     ignore collision with that GameObject.
     */
-    Pixel setPosition(size_t newX, size_t newY, bool isCheckCollision,
-                        GameObject ignoredObject = null)
+    Pixel setPosition(size_t newX, size_t newY, bool isCheckCollision, GameObject ignoredObject = null)
     {
         Pixel anotherPixel = parent._area.game.renderer.pixelGrid[newX][newY];
 
@@ -717,23 +710,22 @@ public:
         return anotherPixel;
     }
 
-    /// Return absolute x position (relative to Renderer's 0,0 coordinate)
-    @property size_t absoluteX()
+    /// Return absolute x position (relative to layout's 0,0 coordinate)
+    @property size_t absoluteX() pure const
     {
         return x;
     }
 
-    /// Return absolute y position (relative to Renderer's 0,0 coordinate)
-    @property size_t absoluteY()
+    /// Return absolute y position (relative to layout's 0,0 coordinate)
+    @property size_t absoluteY() pure const
     {
         return y;
     }
 
     /// Return symbol (character) that visually represents the Pixel
-    @property dchar symbol()
+    @property dchar symbol() pure const
     {
-        if (parent._blinkHandler.blinkCycle > 0
-                && parent._blinkHandler.blinkPhase)
+        if (parent._blinkHandler.blinkCycle > 0 && parent._blinkHandler.blinkPhase)
         {
             return parent._blinkHandler.blinkSymbol;
         }
@@ -1024,11 +1016,6 @@ Collectable coin
 */
 class Coin : GameObject
 {
-private:
-    static dchar[] animationSymbols = [ '|', '/', '-', '\\' ];
-    size_t frameId;
-
-public:
     this(IObjectContainer area, size_t x, size_t y, size_t startFrame=0)
     {
         super(area, x, y, Direction.RIGHT);
@@ -1050,6 +1037,32 @@ public:
             frameId = 0;
         }
     }
+
+private:
+    immutable static dchar[] animationSymbols = [ '|', '/', '-', '\\' ];
+    size_t frameId;
+}
+
+/**
+Word, has no gravity
+*/
+class Word : GameObject
+{
+    this(IObjectContainer area, size_t x, size_t y)
+    {
+        super(area, x, y, Direction.RIGHT, 0);
+    }
+}
+
+/**
+Solid ground in the end of a file
+*/
+class Ground : GameObject
+{
+    this(IObjectContainer area, size_t y)
+    {
+        super(area, 0, y, Direction.RIGHT, 0);
+    }
 }
 
 /**
@@ -1057,7 +1070,6 @@ Player's house that a player needs to reach in order to finish a game
 */
 class House : GameObject
 {
-public:
     this(IObjectContainer area, size_t x, size_t y)
     {
         super(area, x, y, Direction.RIGHT);
@@ -1105,23 +1117,24 @@ public:
 }
 
 /**
-Common class for any villain.
+Common class to be extended by any type of villain.
 */
 abstract class Villain : GameObject
 {
-    private:
-    int _health;
-    size_t[2] healthPixelIndex;
-
-    void removeFromArea()
-    {
-        _area.removeVillain(this);
-    }
-
-    public:
+    /**
+    Params:
+        area                  = area which Villain resides in
+        x                     = absoulte X position of the top-left corner
+        y                     = absoulte Y position of the top-left corner
+        direction             = initial direction
+        health                = initial health points
+        leftHealthPixelIndex  = index of health-indicating Pixel in the slice of GameObject left direction Pixels
+        rightHealthPixelIndex = index of health-indicating Pixel in the slice of GameObject right direction Pixels
+        gravity               = increase in Villain's Y position per each game update tick (defaults to 1)
+    */
     this(IObjectContainer area, size_t x, size_t y, Direction direction,
-    int health, size_t leftHealthPixelIndex, size_t rightHealthPixelIndex,
-    size_t gravity=1)
+         int health, size_t leftHealthPixelIndex, size_t rightHealthPixelIndex,
+         size_t gravity=1)
     {
         super(area, x, y, direction, gravity);
 
@@ -1159,8 +1172,7 @@ abstract class Villain : GameObject
 
     @property void health(int value)
     {
-        // Normalize input value. Since health is displayed as a single char,
-        // it can only be 1 character long
+        // Normalize input value. Since health is displayed as a single char, it can only be 1 character long
         if (value > 9)
         {
             value = 9;
@@ -1179,26 +1191,35 @@ abstract class Villain : GameObject
         _health = value;
 
         // Render updated health value
-        _pixels[Direction.LEFT][healthPixelIndex[Direction.LEFT]]._symbol =
-        to!dchar(to!string(_health));
-        _pixels[Direction.RIGHT][healthPixelIndex[Direction.RIGHT]]._symbol =
-        to!dchar(to!string(_health));
+        _pixels[Direction.LEFT][healthPixelIndex[Direction.LEFT]]._symbol = to!dchar(to!string(_health));
+        _pixels[Direction.RIGHT][healthPixelIndex[Direction.RIGHT]]._symbol = to!dchar(to!string(_health));
 
         if (_health <= 0)
         {
             killItself;
         }
     }
+
+private:
+    int _health;
+    size_t[2] healthPixelIndex;
+
+    void removeFromArea()
+    {
+        _area.removeVillain(this);
+    }
 }
 
 class Spider : Villain
 {
-private:
-    size_t _minY, _maxY;
-    size_t _yStep;
-    bool isMovingUp;
-
-public:
+    /**
+    Params:
+        area = area which Spider resides in
+        x    = absoulte X position of the top-left corner
+        y    = absoulte Y position of the top-left corner
+        minY = absolute Y position which Spider is not allowed to cross when moving downwards
+        maxY = absolute Y position which Spider is not allowed to cross when moving upwards
+    */
     this(IObjectContainer area, size_t x, size_t y, size_t minY, size_t maxY)
     {
         super(area, x, y, Direction.RIGHT, 3, 12, 12, 0);
@@ -1258,16 +1279,25 @@ public:
         super.killItself(blinkCycles);
         _yStep = 0;
     }
+
+private:
+    size_t _minY, _maxY;
+    size_t _yStep;
+    bool isMovingUp;
 }
 
 class Bird : Villain
 {
-    private:
-    size_t _minX, _maxX;
-
-    public:
-    this(IObjectContainer area, size_t x, size_t y, Direction direction,
-         size_t minX, size_t maxX)
+    /**
+    Params:
+        area      = area which Bird resides in
+        x         = absoulte X position of the top-left corner
+        y         = absoulte Y position of the top-left corner
+        direction = initial direction
+        minX      = absolute X position which Bird is not allowed to cross when moving left
+        maxX      = absolute Y position which Bird is not allowed to cross when moving right
+    */
+    this(IObjectContainer area, size_t x, size_t y, Direction direction, size_t minX, size_t maxX)
     {
         super(area, x, y, direction, 2, 10, 7, 0);
         addPixel('\\', 0, 0, Direction.RIGHT);
@@ -1311,16 +1341,23 @@ class Bird : Villain
             direction = Direction.LEFT;
         }
     }
+
+private:
+    size_t _minX, _maxX;
 }
 
 class Sword : Villain
 {
-private:
-    size_t _minX, _maxX;
-
-public:
-    this(IObjectContainer area, size_t x, size_t y, Direction direction,
-         size_t minX, size_t maxX)
+    /**
+    Params:
+        area      = area which Sword resides in
+        x         = absoulte X position of the top-left corner
+        y         = absoulte Y position of the top-left corner
+        direction = initial direction
+        minX      = absolute X position which Sword is not allowed to cross when moving left
+        maxX      = absolute Y position which Sword is not allowed to cross when moving right
+    */
+    this(IObjectContainer area, size_t x, size_t y, Direction direction, size_t minX, size_t maxX)
     {
         super(area, x, y, direction, 1, 7, 0);
         addPixel(to!dchar(to!string(_health)), 0, 0, Direction.RIGHT);
@@ -1359,4 +1396,7 @@ public:
             direction = Direction.LEFT;
         }
     }
+
+private:
+    size_t _minX, _maxX;
 }

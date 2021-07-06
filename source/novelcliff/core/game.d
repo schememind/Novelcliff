@@ -21,7 +21,7 @@ private:
     // Reference to user interface
     IUserInterface _ui;
 
-    LivingObject player;
+    Player player;
     Renderer _renderer;
     Area[] areas;
     size_t activeAreaId;
@@ -133,7 +133,7 @@ public:
         );
 
         // Create player and pass its reference to Area
-        player = new LivingObject(areas[0], 1, 0, Direction.RIGHT, 1);
+        player = new Player(areas[0], 1, 0, Direction.RIGHT);
         player.addPixel('\U0000003e', 0, 0, Direction.RIGHT);    // >
         player.addPixel('\U0000003c', 0, 0, Direction.LEFT);     // <
         player.recalculateProperties;
